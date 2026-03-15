@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Sarraf mark</title>
+  <desc id="desc">A minimal faceted gemstone and jeweler's loupe mark.</desc>
+  <g fill="none" stroke="#0f766e" stroke-linejoin="round" stroke-linecap="round">
+    <path stroke-width="18" d="M148 161h188l54 70-134 128L94 231z"/>
+    <path stroke-width="12" d="M148 161l108 198 80-198"/>
+    <path stroke-width="12" d="M194 161l62 70 44-70"/>
+    <path stroke-width="12" d="M94 231h296"/>
+    <circle cx="342" cy="316" r="54" stroke-width="16"/>
+    <path stroke-width="20" d="M380 354l44 44"/>
+    <path stroke-width="14" d="M156 109l10 27 27 10-27 10-10 27-10-27-27-10 27-10z"/>
+  </g>
+</svg>

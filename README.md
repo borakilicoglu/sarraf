@@ -1,4 +1,8 @@
-# sarraf
+<p align="center">
+  <img src="./assets/logo.svg" alt="Sarraf logo" width="200" />
+</p>
+
+<h1 align="center">sarraf</h1>
 
 Sarraf is a dependency analysis CLI for JavaScript projects, inspired by the problems tools like Knip solve, with optional AI-powered insights on top.
 
