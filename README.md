@@ -4,12 +4,9 @@
 
 <h1 align="center">sarraf</h1>
 
-Sarraf is a dependency analysis CLI for JavaScript projects, inspired by the problems tools like Knip solve, with optional AI-powered insights on top.
+Sarraf is a dependency analysis CLI for JavaScript and TypeScript projects with optional AI-powered insights.
 
 Sarraf scans your dependencies like a jeweler inspects gold. It finds unused packages, flags dependency hygiene issues, and, when you provide an AI token, can explain findings and suggest cleanup actions directly in the CLI.
-
-Turkce:
-Sarraf, JavaScript/TypeScript projelerinde Knip benzeri bagimlilik analizi yapan ve istenirse AI destekli yorumlar uretebilen bir komut satiri aracidir.
 
 ## Why Sarraf?
 
@@ -21,7 +18,7 @@ Which packages in this project are actually needed, and which ones are adding we
 
 Sarraf's direction is:
 
-- cover the core dependency analysis workflow that developers expect from tools like Knip
+- cover the core dependency analysis workflow teams expect from a modern dependency scanner
 - add an optional AI layer for interpretation, prioritization, and remediation suggestions
 - keep the base scanner useful even when no token is provided
 
@@ -143,4 +140,4 @@ The goal is simpler and more useful in daily work:
 
 ## One-Line Pitch
 
-Sarraf is a CLI that finds unnecessary npm packages like Knip, then goes further with optional AI-powered explanations and cleanup guidance.
+Sarraf is a CLI that finds unnecessary and risky npm packages, then goes further with optional AI-powered explanations and cleanup guidance.
