@@ -3,7 +3,13 @@ import path from "node:path";
 
 export interface PackageMetadata {
   packagePath: string;
+  packageDir: string;
   dependencies: Set<string>;
+  devDependencies: Set<string>;
+  peerDependencies: Set<string>;
+  optionalDependencies: Set<string>;
+  allDependencies: Set<string>;
+  scripts: Record<string, string>;
 }
 
 interface PackageJsonShape {
@@ -11,25 +17,41 @@ interface PackageJsonShape {
   devDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
+  scripts?: Record<string, string>;
 }
 
 export async function readPackageMetadata(rootDir: string): Promise<PackageMetadata> {
   const packagePath = await findNearestPackageJson(rootDir);
-  const packageJson = JSON.parse(
-    await readFile(packagePath, "utf8"),
-  ) as PackageJsonShape;
+  const packageJson = (await readPackageJson(packagePath)) as PackageJsonShape;
 
-  const dependencies = new Set<string>([
-    ...Object.keys(packageJson.dependencies ?? {}),
-    ...Object.keys(packageJson.devDependencies ?? {}),
-    ...Object.keys(packageJson.peerDependencies ?? {}),
-    ...Object.keys(packageJson.optionalDependencies ?? {}),
+  const dependencies = new Set<string>(Object.keys(packageJson.dependencies ?? {}));
+  const devDependencies = new Set<string>(Object.keys(packageJson.devDependencies ?? {}));
+  const peerDependencies = new Set<string>(Object.keys(packageJson.peerDependencies ?? {}));
+  const optionalDependencies = new Set<string>(Object.keys(packageJson.optionalDependencies ?? {}));
+  const allDependencies = new Set<string>([
+    ...dependencies,
+    ...devDependencies,
+    ...peerDependencies,
+    ...optionalDependencies,
   ]);
 
-  return { packagePath, dependencies };
+  return {
+    packagePath,
+    packageDir: path.dirname(packagePath),
+    dependencies,
+    devDependencies,
+    peerDependencies,
+    optionalDependencies,
+    allDependencies,
+    scripts: packageJson.scripts ?? {},
+  };
 }
 
-async function findNearestPackageJson(startDir: string): Promise<string> {
+export async function readPackageJson(packagePath: string): Promise<unknown> {
+  return JSON.parse(await readFile(packagePath, "utf8"));
+}
+
+export async function findNearestPackageJson(startDir: string): Promise<string> {
   let currentDir = path.resolve(startDir);
 
   while (true) {

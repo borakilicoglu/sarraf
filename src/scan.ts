@@ -5,10 +5,14 @@ import path from "node:path";
 import { findSourceFiles } from "./fileFinder.js";
 import { parseImports } from "./importParser.js";
 import { readPackageMetadata } from "./packageReader.js";
+import { parsePackageScripts } from "./scriptParser.js";
+import { mapToSourcePath } from "./sourceMapper.js";
 
 export interface FileScanResult {
   filePath: string;
+  relativePath: string;
   imports: string[];
+  isProduction: boolean;
 }
 
 export interface ScanResult {
@@ -16,43 +20,88 @@ export interface ScanResult {
   packagePath: string;
   files: FileScanResult[];
   externalImports: string[];
+  scriptCommandPackages: string[];
+  scriptEntryFiles: string[];
+  packageTraces: Record<string, string[]>;
   missingPackages: string[];
+  unusedDependencies: string[];
+  unusedDevDependencies: string[];
+  misplacedDevDependencies: string[];
 }
 
-export async function scanProject(rootDir: string): Promise<ScanResult> {
+export interface ScanOptions {
+  production?: boolean;
+  strict?: boolean;
+}
+
+export async function scanProject(rootDir: string, options: ScanOptions = {}): Promise<ScanResult> {
   const absoluteRoot = path.resolve(rootDir);
   const [files, packageMetadata] = await Promise.all([
     findSourceFiles(absoluteRoot),
     readPackageMetadata(absoluteRoot),
   ]);
+  const scriptAnalysis = await parsePackageScripts(
+    packageMetadata.packageDir,
+    packageMetadata.scripts,
+  );
+  const allFiles = mergeFiles(files, scriptAnalysis.fileEntries);
+
+  const selectedFiles = options.production || options.strict
+    ? allFiles.filter((filePath) => isProductionFilePath(absoluteRoot, filePath))
+    : allFiles;
+  const mappedFiles = await Promise.all(
+    selectedFiles.map((filePath) => mapToSourcePath(absoluteRoot, filePath)),
+  );
+  const dedupedFiles = mergeFiles([], mappedFiles);
 
   const fileResults = await Promise.all(
-    files.map(async (filePath) => {
+    dedupedFiles.map(async (filePath) => {
       const source = await readFile(filePath, "utf8");
       const imports = parseImports(source).map((entry) => entry.specifier);
+      const relativePath = path.relative(absoluteRoot, filePath) || path.basename(filePath);
 
       return {
         filePath,
+        relativePath,
         imports,
+        isProduction: isProductionFilePath(absoluteRoot, filePath),
       };
     }),
   );
 
-  const externalImports = collectExternalImports(fileResults);
+  const externalImports = collectExternalImports(fileResults, scriptAnalysis.commandPackages);
+  const packageTraces = collectPackageTraces(fileResults, scriptAnalysis.commandUsage);
   const missingPackages = externalImports.filter(
-    (name) => !isBuiltinPackage(name) && !packageMetadata.dependencies.has(name),
+    (name) => !isBuiltinPackage(name) && !packageMetadata.allDependencies.has(name),
   );
+  const unusedDependencies = getUnusedDeclaredPackages(
+    packageMetadata.dependencies,
+    externalImports,
+  );
+  const unusedDevDependencies = getUnusedDeclaredPackages(
+    packageMetadata.devDependencies,
+    externalImports,
+  );
+  const misplacedDevDependencies = options.strict
+    ? getMisplacedDevDependencies(fileResults, packageMetadata.devDependencies)
+    : [];
 
   return {
     rootDir: absoluteRoot,
     packagePath: packageMetadata.packagePath,
     files: fileResults,
     externalImports,
+    scriptCommandPackages: scriptAnalysis.commandPackages,
+    scriptEntryFiles: await mapScriptEntryFiles(absoluteRoot, scriptAnalysis.fileEntries),
+    packageTraces,
     missingPackages,
+    unusedDependencies,
+    unusedDevDependencies,
+    misplacedDevDependencies,
   };
 }
 
-function collectExternalImports(files: FileScanResult[]): string[] {
+function collectExternalImports(files: FileScanResult[], scriptPackages: string[]): string[] {
   const packages = new Set<string>();
 
   for (const file of files) {
@@ -63,7 +112,47 @@ function collectExternalImports(files: FileScanResult[]): string[] {
     }
   }
 
+  for (const packageName of scriptPackages) {
+    packages.add(packageName);
+  }
+
   return [...packages].sort();
+}
+
+function collectPackageTraces(
+  files: FileScanResult[],
+  scriptUsage: Record<string, string[]>,
+): Record<string, string[]> {
+  const traces = new Map<string, Set<string>>();
+
+  for (const file of files) {
+    for (const specifier of file.imports) {
+      if (!isExternalSpecifier(specifier)) {
+        continue;
+      }
+
+      const packageName = getPackageName(specifier);
+      const entries = traces.get(packageName) ?? new Set<string>();
+      entries.add(file.relativePath);
+      traces.set(packageName, entries);
+    }
+  }
+
+  for (const [packageName, entries] of Object.entries(scriptUsage)) {
+    const currentEntries = traces.get(packageName) ?? new Set<string>();
+
+    for (const entry of entries) {
+      currentEntries.add(entry);
+    }
+
+    traces.set(packageName, currentEntries);
+  }
+
+  return Object.fromEntries(
+    [...traces.entries()]
+      .map(([packageName, entries]) => [packageName, [...entries].sort()] as const)
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
 }
 
 function isExternalSpecifier(specifier: string): boolean {
@@ -82,4 +171,72 @@ function getPackageName(specifier: string): string {
 
 function isBuiltinPackage(packageName: string): boolean {
   return builtinModules.includes(packageName) || builtinModules.includes(packageName.replace(/^node:/, ""));
+}
+
+function mergeFiles(files: string[], extraFiles: string[]): string[] {
+  return [...new Set([...files, ...extraFiles])].sort();
+}
+
+async function mapScriptEntryFiles(rootDir: string, fileEntries: string[]): Promise<string[]> {
+  const mappedEntries = await Promise.all(
+    fileEntries.map(async (filePath) => {
+      const mappedPath = await mapToSourcePath(rootDir, filePath);
+      return path.relative(rootDir, mappedPath) || path.basename(mappedPath);
+    }),
+  );
+
+  return [...new Set(mappedEntries)].sort();
+}
+
+function getUnusedDeclaredPackages(
+  declaredPackages: Set<string>,
+  usedPackages: string[],
+): string[] {
+  const usedSet = new Set(usedPackages);
+
+  return [...declaredPackages]
+    .filter((packageName) => !usedSet.has(packageName))
+    .sort();
+}
+
+function getMisplacedDevDependencies(
+  files: FileScanResult[],
+  devDependencies: Set<string>,
+): string[] {
+  const misplaced = new Set<string>();
+
+  for (const file of files) {
+    if (!file.isProduction) {
+      continue;
+    }
+
+    for (const specifier of file.imports) {
+      if (!isExternalSpecifier(specifier)) {
+        continue;
+      }
+
+      const packageName = getPackageName(specifier);
+
+      if (devDependencies.has(packageName)) {
+        misplaced.add(packageName);
+      }
+    }
+  }
+
+  return [...misplaced].sort();
+}
+
+function isProductionFilePath(rootDir: string, filePath: string): boolean {
+  const relativePath = path.relative(rootDir, filePath);
+  const normalizedPath = relativePath.split(path.sep).join("/");
+
+  return !(
+    normalizedPath.includes("/__tests__/") ||
+    normalizedPath.includes("/__mocks__/") ||
+    normalizedPath.includes("/fixtures/") ||
+    normalizedPath.includes("/test-utils/") ||
+    /\.test\.[^.]+$/i.test(normalizedPath) ||
+    /\.spec\.[^.]+$/i.test(normalizedPath) ||
+    /\.stories\.[^.]+$/i.test(normalizedPath)
+  );
 }

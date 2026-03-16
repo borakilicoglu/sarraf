@@ -1,0 +1,174 @@
+import pc from "picocolors";
+
+import type { ScanResult } from "./scan.js";
+import type { WorkspaceTarget } from "./workspaceFinder.js";
+
+export const SUPPORTED_REPORTERS = ["text", "json"] as const;
+
+export type ReporterType = (typeof SUPPORTED_REPORTERS)[number];
+export type FindingType =
+  | "missing"
+  | "unused-dependencies"
+  | "unused-devDependencies"
+  | "misplaced-devDependencies";
+
+export interface ActiveFinding {
+  type: FindingType;
+  title: string;
+  items: string[];
+}
+
+export interface ReportWorkspace {
+  workspace: WorkspaceTarget;
+  result: ScanResult;
+  findings: ActiveFinding[];
+}
+
+export interface RenderReportInput {
+  targetDir: string;
+  reporter: ReporterType;
+  debug: boolean;
+  production: boolean;
+  strict: boolean;
+  include: FindingType[];
+  exclude: FindingType[];
+  workspaces: ReportWorkspace[];
+  trace?: string;
+  ai?: {
+    provider: string;
+    model?: string;
+  };
+}
+
+export function renderReport(input: RenderReportInput): string {
+  if (input.reporter === "json") {
+    return JSON.stringify(
+      {
+        targetDir: input.targetDir,
+        mode: {
+          debug: input.debug,
+          production: input.production,
+          strict: input.strict,
+          include: input.include,
+          exclude: input.exclude,
+        },
+        ai: input.ai ?? null,
+        workspaces: input.workspaces.map(({ workspace, result, findings }) => ({
+          workspace,
+          summary: {
+            filesScanned: result.files.length,
+            externalPackagesUsed: result.externalImports.length,
+          findings: findings.reduce((sum, finding) => sum + finding.items.length, 0),
+          scriptCommandPackages: result.scriptCommandPackages,
+          scriptEntryFiles: result.scriptEntryFiles,
+        },
+          findings,
+          externalImports: result.externalImports,
+          traces: input.trace
+            ? {
+                package: input.trace,
+                sources: result.packageTraces[input.trace] ?? [],
+              }
+            : null,
+        })),
+      },
+      null,
+      2,
+    );
+  }
+
+  const lines: string[] = [];
+
+  lines.push(pc.bold(pc.cyan("Sarraf Report")));
+  lines.push(`Target: ${input.targetDir}`);
+  lines.push(`Workspaces: ${input.workspaces.length}`);
+  lines.push(`Mode: ${describeMode(input)}`);
+
+  if (input.ai) {
+    lines.push("");
+    lines.push(pc.magenta("AI mode"));
+    lines.push(`Provider: ${input.ai.provider}`);
+    lines.push(`Model: ${input.ai.model ?? "default"}`);
+    lines.push("Status: configured");
+    lines.push("Note: AI result generation is not implemented yet.");
+  }
+
+  for (const { workspace, result, findings } of input.workspaces) {
+    const findingCount = findings.reduce((sum, finding) => sum + finding.items.length, 0);
+
+    lines.push("");
+    lines.push(pc.bold(`${workspace.name} (${workspace.relativeDir})`));
+    lines.push(`Package: ${result.packagePath}`);
+    lines.push(`Files scanned: ${result.files.length}`);
+    lines.push(`External packages used: ${result.externalImports.length}`);
+    lines.push(`Findings: ${findingCount}`);
+    if (result.scriptCommandPackages.length > 0) {
+      lines.push(`Script packages: ${result.scriptCommandPackages.join(", ")}`);
+    }
+
+    if (findingCount === 0) {
+      lines.push(pc.green("No dependency issues found."));
+    }
+
+    for (const finding of findings) {
+      lines.push("");
+      lines.push(colorizeFindingTitle(finding.type, finding.title));
+
+      for (const item of finding.items) {
+        lines.push(`- ${item}`);
+      }
+    }
+
+    if (result.externalImports.length > 0) {
+      lines.push("");
+      lines.push(pc.dim(`External imports: ${result.externalImports.join(", ")}`));
+    }
+
+    if (input.trace) {
+      lines.push("");
+      lines.push(pc.bold(`Trace: ${input.trace}`));
+
+      const traceEntries = result.packageTraces[input.trace] ?? [];
+
+      if (traceEntries.length === 0) {
+        lines.push(pc.dim("No trace entries found."));
+      } else {
+        for (const entry of traceEntries) {
+          lines.push(`- ${entry}`);
+        }
+      }
+    }
+  }
+
+  if (input.debug) {
+    lines.push("");
+    lines.push(pc.dim("Debug"));
+    lines.push(pc.dim(`Reporter: ${input.reporter}`));
+    lines.push(pc.dim(`Include: ${input.include.join(", ") || "-"}`));
+    lines.push(pc.dim(`Exclude: ${input.exclude.join(", ") || "-"}`));
+  }
+
+  return lines.join("\n");
+}
+
+function describeMode(input: RenderReportInput): string {
+  const enabled = [
+    input.production ? "production" : null,
+    input.strict ? "strict" : null,
+    input.debug ? "debug" : null,
+  ].filter(Boolean);
+
+  return enabled.join(", ") || "default";
+}
+
+function colorizeFindingTitle(type: FindingType, title: string): string {
+  if (type === "missing") {
+    return pc.red(title);
+  }
+
+  if (type === "misplaced-devDependencies") {
+    return pc.red(title);
+  }
+
+  return pc.yellow(title);
+}

@@ -6,6 +6,16 @@ Sarraf is a dependency analysis CLI for JavaScript and TypeScript projects with 
 
 Sarraf scans your dependencies like a jeweler inspects gold. It finds unused packages, flags dependency hygiene issues, and, when you provide an AI token, can explain findings and suggest cleanup actions directly in the CLI.
 
+Current status:
+
+- unused `dependencies` and `devDependencies`
+- script-aware dependency detection
+- workspace and monorepo-aware scanning
+- text and JSON reporters
+- package usage tracing
+- source mapping from build output back to source files
+- production and strict scan modes
+
 ## Why Sarraf?
 
 JavaScript projects accumulate packages over time. Some stop being used. Some belong in `devDependencies` but end up in `dependencies`. Some become outdated, deprecated, or risky.
@@ -40,8 +50,9 @@ Current focus:
 
 - read `package.json`
 - scan `js`, `ts`, `jsx`, `tsx`, `mjs`, `cjs`, `mts`, `cts` files
-- extract imported packages from `import`, dynamic `import()`, and `require()`
-- report declared packages that do not appear to be used
+- extract package usage from `import`, `export ... from`, `import = require`, `require`, and `require.resolve`
+- include package usage referenced from `package.json` scripts
+- report unused and suspicious dependency declarations
 
 ## MVP Scope
 
@@ -53,14 +64,19 @@ Included in v1:
 - source scan for dependency usage
 - unused `dependencies` detection
 - unused `devDependencies` detection
+- script parser support
+- workspace-aware scanning
+- trace output for package usage
+- source mapping for build output
+- reporter support for `text` and `json`
+- `production` and `strict` scan modes
 - optional AI explanations in the CLI when a valid token is configured
 
 Planned after MVP:
 
-- wrong dependency placement detection
+- deeper wrong dependency placement detection
 - deprecated package checks
 - basic dependency risk score
-- JSON output
 - CI-friendly output and exit codes
 - richer AI remediation suggestions
 
@@ -98,6 +114,36 @@ Scan a specific directory:
 npx sarraf ./packages/web
 ```
 
+Scan a single workspace in a monorepo:
+
+```bash
+npx sarraf . --workspace packages/web
+```
+
+Get JSON output:
+
+```bash
+npx sarraf . --reporter json
+```
+
+Trace why a package is considered used:
+
+```bash
+npx sarraf . --trace typescript
+```
+
+Production-only scan:
+
+```bash
+npx sarraf . --production
+```
+
+Strict mode:
+
+```bash
+npx sarraf . --strict
+```
+
 For local development in this repository:
 
 ```bash
@@ -105,6 +151,14 @@ npm run dev
 npm run build
 npm run typecheck
 node dist/index.js .
+```
+
+Useful local examples:
+
+```bash
+node dist/index.js . --debug
+node dist/index.js . --exclude unused-devDependencies
+node dist/index.js . --reporter json --trace commander
 ```
 
 ## AI Mode
