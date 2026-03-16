@@ -5,11 +5,13 @@ import path from "node:path";
 import pc from "picocolors";
 import { Command } from "commander";
 
+import { generateAiSummary } from "./aiClient.js";
 import { resolveAiConfig, SUPPORTED_AI_PROVIDERS } from "./aiConfig.js";
+import { loadSarrafConfig, type SarrafConfig } from "./config.js";
+import { getActiveFindings, type FindingRules } from "./findings.js";
 import {
   renderReport,
   SUPPORTED_REPORTERS,
-  type ActiveFinding,
   type FindingType,
   type ReporterType,
 } from "./reporters.js";
@@ -32,7 +34,7 @@ program
   .option("--ai", "enable AI-assisted analysis")
   .option("--provider <provider>", `AI provider (${SUPPORTED_AI_PROVIDERS.join(", ")})`)
   .option("--model <model>", "AI model name")
-  .option("--reporter <type>", `reporter (${SUPPORTED_REPORTERS.join(", ")})`, "text")
+  .option("--reporter <type>", `reporter (${SUPPORTED_REPORTERS.join(", ")})`)
   .option("--include <types>", "comma-separated finding types to include")
   .option("--exclude <types>", "comma-separated finding types to exclude")
   .option("--workspace <names>", "comma-separated workspace filters")
@@ -40,22 +42,35 @@ program
   .option("--strict", "flag devDependencies used in production files")
   .option("--debug", "print resolved debug information")
   .option("--trace <package>", "trace where a package is used")
+  .option("--ignore-packages <names>", "comma-separated package names to ignore in findings")
+  .option("--allow-unused-dependencies <names>", "comma-separated dependency allowlist")
+  .option("--allow-unused-dev-dependencies <names>", "comma-separated devDependency allowlist")
+  .option("--allow-missing-packages <names>", "comma-separated missing package allowlist")
+  .option("--allow-misplaced-dev-dependencies <names>", "comma-separated misplaced devDependency allowlist")
   .action(async (target, options) => {
     try {
       const targetDir = path.resolve(target);
-      const aiConfig = resolveAiConfig(options);
-      const reporter = parseReporter(options.reporter);
-      const include = parseFindingTypes(options.include);
-      const exclude = parseFindingTypes(options.exclude);
-      const workspaceFilters = parseCsvOption(options.workspace);
+      const config = await loadSarrafConfig(targetDir);
+      const mergedOptions = mergeCliWithConfig(options, config);
+      const aiConfig = resolveAiConfig({
+        ai: mergedOptions.ai,
+        provider: mergedOptions.provider,
+        model: mergedOptions.model,
+        configAi: config.ai,
+      });
+      const reporter = parseReporter(mergedOptions.reporter);
+      const include = parseFindingTypes(mergedOptions.include);
+      const exclude = parseFindingTypes(mergedOptions.exclude);
+      const workspaceFilters = parseCsvOption(mergedOptions.workspace);
+      const rules = buildFindingRules(mergedOptions, include, exclude);
       const { rootDir, workspaces } = await discoverWorkspaces(targetDir, workspaceFilters);
       const workspaceReports = await Promise.all(
         workspaces.map(async (workspace) => {
           const result = await scanProject(workspace.dir, {
-            production: Boolean(options.production),
-            strict: Boolean(options.strict),
+            production: Boolean(mergedOptions.production),
+            strict: Boolean(mergedOptions.strict),
           });
-          const findings = getActiveFindings(result, include, exclude, Boolean(options.production));
+          const findings = getActiveFindings(result, rules, Boolean(mergedOptions.production));
 
           return {
             workspace,
@@ -64,16 +79,18 @@ program
           };
         }),
       );
+      const aiSummary = aiConfig ? await generateAiSummary(aiConfig, workspaceReports) : undefined;
       const report = renderReport({
         targetDir: rootDir,
         reporter,
-        debug: Boolean(options.debug),
-        production: Boolean(options.production),
-        strict: Boolean(options.strict),
+        debug: Boolean(mergedOptions.debug),
+        production: Boolean(mergedOptions.production),
+        strict: Boolean(mergedOptions.strict),
         include,
         exclude,
         workspaces: workspaceReports,
-        ...(options.trace ? { trace: String(options.trace) } : {}),
+        ...(mergedOptions.trace ? { trace: String(mergedOptions.trace) } : {}),
+        ...(aiSummary ? { aiSummary } : {}),
         ...(aiConfig
           ? {
               ai: {
@@ -97,48 +114,6 @@ program
   });
 
 program.parseAsync(process.argv);
-
-function getActiveFindings(
-  result: Awaited<ReturnType<typeof scanProject>>,
-  include: FindingType[],
-  exclude: FindingType[],
-  production: boolean,
-): ActiveFinding[] {
-  const candidates: ActiveFinding[] = [
-    {
-      type: "missing",
-      title: "Missing from package.json",
-      items: result.missingPackages,
-    },
-    {
-      type: "unused-dependencies",
-      title: "Unused dependencies",
-      items: result.unusedDependencies,
-    },
-    {
-      type: "unused-devDependencies",
-      title: "Unused devDependencies",
-      items: production ? [] : result.unusedDevDependencies,
-    },
-    {
-      type: "misplaced-devDependencies",
-      title: "Dev dependencies used in production files",
-      items: result.misplacedDevDependencies,
-    },
-  ];
-
-  return candidates.filter((candidate) => {
-    if (include.length > 0 && !include.includes(candidate.type)) {
-      return false;
-    }
-
-    if (exclude.includes(candidate.type)) {
-      return false;
-    }
-
-    return candidate.items.length > 0;
-  });
-}
 
 function parseReporter(value: string): ReporterType {
   if (SUPPORTED_REPORTERS.includes(value as ReporterType)) {
@@ -169,4 +144,69 @@ function parseCsvOption(value?: string): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function buildFindingRules(
+  options: CliOptions,
+  include: FindingType[],
+  exclude: FindingType[],
+): FindingRules {
+  return {
+    include,
+    exclude,
+    ignorePackages: parseCsvOption(options.ignorePackages),
+    allowUnusedDependencies: parseCsvOption(options.allowUnusedDependencies),
+    allowUnusedDevDependencies: parseCsvOption(options.allowUnusedDevDependencies),
+    allowMissingPackages: parseCsvOption(options.allowMissingPackages),
+    allowMisplacedDevDependencies: parseCsvOption(options.allowMisplacedDevDependencies),
+  };
+}
+
+interface CliOptions {
+  ai: boolean;
+  provider: string | undefined;
+  model: string | undefined;
+  reporter: string;
+  include: string | undefined;
+  exclude: string | undefined;
+  workspace: string | undefined;
+  production: boolean;
+  strict: boolean;
+  debug: boolean;
+  trace: string | undefined;
+  ignorePackages: string | undefined;
+  allowUnusedDependencies: string | undefined;
+  allowUnusedDevDependencies: string | undefined;
+  allowMissingPackages: string | undefined;
+  allowMisplacedDevDependencies: string | undefined;
+}
+
+function mergeCliWithConfig(rawOptions: Record<string, unknown>, config: SarrafConfig): CliOptions {
+  return {
+    ai: Boolean(rawOptions.ai),
+    provider: asOptionalString(rawOptions.provider) ?? config.ai?.provider,
+    model: asOptionalString(rawOptions.model) ?? config.ai?.model,
+    reporter: asOptionalString(rawOptions.reporter) ?? config.reporter ?? "text",
+    include: asOptionalString(rawOptions.include) ?? config.include?.join(","),
+    exclude: asOptionalString(rawOptions.exclude) ?? config.exclude?.join(","),
+    workspace: asOptionalString(rawOptions.workspace) ?? config.workspace?.join(","),
+    production: rawOptions.production === true ? true : config.production ?? false,
+    strict: rawOptions.strict === true ? true : config.strict ?? false,
+    debug: rawOptions.debug === true ? true : config.debug ?? false,
+    trace: asOptionalString(rawOptions.trace) ?? config.trace,
+    ignorePackages: asOptionalString(rawOptions.ignorePackages) ?? config.ignorePackages?.join(","),
+    allowUnusedDependencies:
+      asOptionalString(rawOptions.allowUnusedDependencies) ?? config.allowUnusedDependencies?.join(","),
+    allowUnusedDevDependencies:
+      asOptionalString(rawOptions.allowUnusedDevDependencies) ?? config.allowUnusedDevDependencies?.join(","),
+    allowMissingPackages:
+      asOptionalString(rawOptions.allowMissingPackages) ?? config.allowMissingPackages?.join(","),
+    allowMisplacedDevDependencies:
+      asOptionalString(rawOptions.allowMisplacedDevDependencies)
+      ?? config.allowMisplacedDevDependencies?.join(","),
+  };
+}
+
+function asOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
 }

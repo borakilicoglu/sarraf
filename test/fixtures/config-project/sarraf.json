@@ -1,0 +1,5 @@
+{
+  "reporter": "json",
+  "ignorePackages": ["react"],
+  "allowUnusedDevDependencies": ["typescript"]
+}

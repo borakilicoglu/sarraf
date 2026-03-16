@@ -15,6 +15,9 @@ Current status:
 - package usage tracing
 - source mapping from build output back to source files
 - production and strict scan modes
+- config file support via `sarraf.json` or `package.json#sarraf`
+- ignore and allowlist controls for findings
+- AI summaries via `openai`, `anthropic`, or `gemini`
 
 ## Why Sarraf?
 
@@ -70,7 +73,9 @@ Included in v1:
 - source mapping for build output
 - reporter support for `text` and `json`
 - `production` and `strict` scan modes
-- optional AI explanations in the CLI when a valid token is configured
+- config support
+- ignore and allowlist support
+- optional AI summaries in the CLI when a valid token is configured
 
 Planned after MVP:
 
@@ -144,6 +149,13 @@ Strict mode:
 npx sarraf . --strict
 ```
 
+Ignore or allow specific findings from the CLI:
+
+```bash
+npx sarraf . --ignore-packages react
+npx sarraf . --allow-unused-dev-dependencies typescript
+```
+
 For local development in this repository:
 
 ```bash
@@ -161,6 +173,46 @@ node dist/index.js . --exclude unused-devDependencies
 node dist/index.js . --reporter json --trace commander
 ```
 
+## Config
+
+Sarraf can load config from either:
+
+- `sarraf.json`
+- `package.json` under the `sarraf` key
+
+Example `sarraf.json`:
+
+```json
+{
+  "reporter": "json",
+  "production": false,
+  "strict": false,
+  "exclude": ["missing"],
+  "ignorePackages": ["react"],
+  "allowUnusedDependencies": [],
+  "allowUnusedDevDependencies": ["typescript"],
+  "allowMissingPackages": [],
+  "allowMisplacedDevDependencies": [],
+  "workspace": ["packages/web"],
+  "ai": {
+    "provider": "openai",
+    "model": "gpt-4.1"
+  }
+}
+```
+
+CLI flags take precedence over config values.
+
+## Ignore And Allowlist
+
+Use these when a finding is intentionally acceptable:
+
+- `ignorePackages`
+- `allowUnusedDependencies`
+- `allowUnusedDevDependencies`
+- `allowMissingPackages`
+- `allowMisplacedDevDependencies`
+
 ## AI Mode
 
 Sarraf works in two modes:
@@ -175,7 +227,7 @@ Environment variables:
 ```bash
 AI_PROVIDER=openai
 AI_TOKEN=your_token
-AI_MODEL=gpt-5-mini
+AI_MODEL=gpt-4.1
 ```
 
 Current provider values:
@@ -195,7 +247,33 @@ AI_PROVIDER=gemini AI_TOKEN=your_token npx sarraf . --ai
 CLI overrides:
 
 ```bash
-npx sarraf . --ai --provider openai --model gpt-5-mini
+npx sarraf . --ai --provider openai --model gpt-4.1
+```
+
+What AI currently does:
+
+- summarizes findings
+- prioritizes the most important cleanup actions
+- turns raw scan output into a short remediation note
+
+What AI does not yet do:
+
+- automatic fixes
+- package reputation or security scoring
+- multi-step remediation planning
+
+## Testing
+
+Local verification includes fixture-based tests for:
+
+- config loading
+- ignore and allowlist behavior
+- AI response parsing
+
+Run:
+
+```bash
+npm test
 ```
 
 ## Product Vision

@@ -34,6 +34,7 @@ export interface RenderReportInput {
   exclude: FindingType[];
   workspaces: ReportWorkspace[];
   trace?: string;
+  aiSummary?: string;
   ai?: {
     provider: string;
     model?: string;
@@ -53,6 +54,7 @@ export function renderReport(input: RenderReportInput): string {
           exclude: input.exclude,
         },
         ai: input.ai ?? null,
+        aiSummary: input.aiSummary ?? null,
         workspaces: input.workspaces.map(({ workspace, result, findings }) => ({
           workspace,
           summary: {
@@ -90,7 +92,13 @@ export function renderReport(input: RenderReportInput): string {
     lines.push(`Provider: ${input.ai.provider}`);
     lines.push(`Model: ${input.ai.model ?? "default"}`);
     lines.push("Status: configured");
-    lines.push("Note: AI result generation is not implemented yet.");
+    lines.push(`Summary: ${input.aiSummary ? "generated" : "not available"}`);
+  }
+
+  if (input.aiSummary) {
+    lines.push("");
+    lines.push(pc.magenta("AI summary"));
+    lines.push(input.aiSummary);
   }
 
   for (const { workspace, result, findings } of input.workspaces) {

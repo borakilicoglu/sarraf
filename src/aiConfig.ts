@@ -10,9 +10,13 @@ export interface AiConfig {
 }
 
 export interface AiOptionsInput {
-  ai?: boolean;
-  provider?: string;
-  model?: string;
+  ai?: boolean | undefined;
+  provider?: string | undefined;
+  model?: string | undefined;
+  configAi?: {
+    provider?: string;
+    model?: string;
+  } | undefined;
 }
 
 export function resolveAiConfig(options: AiOptionsInput): AiConfig | null {
@@ -20,9 +24,14 @@ export function resolveAiConfig(options: AiOptionsInput): AiConfig | null {
     return null;
   }
 
-  const provider = (options.provider ?? process.env.AI_PROVIDER ?? "openai").trim();
+  const provider = (
+    options.provider ??
+    options.configAi?.provider ??
+    process.env.AI_PROVIDER ??
+    "openai"
+  ).trim();
   const token = (process.env.AI_TOKEN ?? "").trim();
-  const model = (options.model ?? process.env.AI_MODEL ?? "").trim();
+  const model = (options.model ?? options.configAi?.model ?? process.env.AI_MODEL ?? "").trim();
 
   if (!isAiProvider(provider)) {
     throw new Error(
