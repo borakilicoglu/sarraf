@@ -33,7 +33,7 @@ function buildPrompt(workspaces: ReportWorkspace[]): string {
   };
 
   return [
-    "You are Sarraf AI, a dependency analysis assistant.",
+    "You are Sadrazam AI, a dependency analysis assistant.",
     "Summarize the most important dependency hygiene issues.",
     "Keep the answer short, actionable, and grouped by priority.",
     "If there are no findings, say that clearly.",

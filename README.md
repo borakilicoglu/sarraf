@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="./assets/logo.svg" alt="Sarraf logo" width="200" />
+  <img src="./assets/logo.svg" alt="Sadrazam logo" width="200" />
 </p>
 
-Sarraf is a dependency analysis CLI for JavaScript and TypeScript projects with optional AI-powered insights.
+Sadrazam is a dependency analysis CLI for JavaScript and TypeScript projects with optional AI-powered insights.
 
-Sarraf scans your dependencies like a jeweler inspects gold. It finds unused packages, flags dependency hygiene issues, and, when you provide an AI token, can explain findings and suggest cleanup actions directly in the CLI.
+Sadrazam scans your dependencies like a jeweler inspects gold. It finds unused packages, flags dependency hygiene issues, and, when you provide an AI token, can explain findings and suggest cleanup actions directly in the CLI.
 
 Current status:
 
@@ -15,27 +15,27 @@ Current status:
 - package usage tracing
 - source mapping from build output back to source files
 - production and strict scan modes
-- config file support via `sarraf.json` or `package.json#sarraf`
+- config file support via `sadrazam.json` or `package.json#sadrazam`
 - ignore and allowlist controls for findings
 - AI summaries via `openai`, `anthropic`, or `gemini`
 
-## Why Sarraf?
+## Why Sadrazam?
 
 JavaScript projects accumulate packages over time. Some stop being used. Some belong in `devDependencies` but end up in `dependencies`. Some become outdated, deprecated, or risky.
 
-Sarraf exists to answer a simple question:
+Sadrazam exists to answer a simple question:
 
 Which packages in this project are actually needed, and which ones are adding weight or risk?
 
-Sarraf's direction is:
+Sadrazam's direction is:
 
 - cover the core dependency analysis workflow teams expect from a modern dependency scanner
 - add an optional AI layer for interpretation, prioritization, and remediation suggestions
 - keep the base scanner useful even when no token is provided
 
-## What Sarraf Does
+## What Sadrazam Does
 
-Sarraf analyzes a project by reading its manifest and source files, then comparing declared dependencies with actual usage.
+Sadrazam analyzes a project by reading its manifest and source files, then comparing declared dependencies with actual usage.
 
 Without AI:
 
@@ -96,22 +96,22 @@ npm install
 When published as an npm package:
 
 ```bash
-npm install -g sarraf
+npm install -g sadrazam
 ```
 
 or run it without a global install:
 
 ```bash
-npx sarraf .
+npx sadrazam .
 ```
 
 ## Quick Start
 
 ```bash
-npx sarraf .
-npx sarraf . --reporter json
-npx sarraf . --trace typescript
-AI_PROVIDER=openai AI_TOKEN=your_token npx sarraf . --ai
+npx sadrazam .
+npx sadrazam . --reporter json
+npx sadrazam . --trace typescript
+AI_PROVIDER=openai AI_TOKEN=your_token npx sadrazam . --ai
 ```
 
 ## Usage
@@ -128,50 +128,50 @@ Common scenarios:
 Scan the current project:
 
 ```bash
-npx sarraf .
+npx sadrazam .
 ```
 
 Scan a specific directory:
 
 ```bash
-npx sarraf ./packages/web
+npx sadrazam ./packages/web
 ```
 
 Scan a single workspace in a monorepo:
 
 ```bash
-npx sarraf . --workspace packages/web
+npx sadrazam . --workspace packages/web
 ```
 
 Get JSON output:
 
 ```bash
-npx sarraf . --reporter json
+npx sadrazam . --reporter json
 ```
 
 Trace why a package is considered used:
 
 ```bash
-npx sarraf . --trace typescript
+npx sadrazam . --trace typescript
 ```
 
 Production-only scan:
 
 ```bash
-npx sarraf . --production
+npx sadrazam . --production
 ```
 
 Strict mode:
 
 ```bash
-npx sarraf . --strict
+npx sadrazam . --strict
 ```
 
 Ignore or allow specific findings from the CLI:
 
 ```bash
-npx sarraf . --ignore-packages react
-npx sarraf . --allow-unused-dev-dependencies typescript
+npx sadrazam . --ignore-packages react
+npx sadrazam . --allow-unused-dev-dependencies typescript
 ```
 
 For local development in this repository:
@@ -194,12 +194,12 @@ node dist/index.js . --ignore-packages react --allow-unused-dev-dependencies typ
 
 ## Config
 
-Sarraf can load config from either:
+Sadrazam can load config from either:
 
-- `sarraf.json`
-- `package.json` under the `sarraf` key
+- `sadrazam.json`
+- `package.json` under the `sadrazam` key
 
-Example `sarraf.json`:
+Example `sadrazam.json`:
 
 ```json
 {
@@ -224,7 +224,7 @@ CLI flags take precedence over config values.
 
 ## Exit Codes
 
-Sarraf uses these exit codes:
+Sadrazam uses these exit codes:
 
 - `0`: scan completed and no findings were reported
 - `1`: execution error, invalid configuration, or unrecoverable runtime failure
@@ -242,7 +242,7 @@ Use these when a finding is intentionally acceptable:
 
 ## AI Mode
 
-Sarraf works in two modes:
+Sadrazam works in two modes:
 
 - standard analysis mode with no token required
 - AI-assisted mode when the user provides an API token
@@ -266,15 +266,15 @@ Current provider values:
 Examples:
 
 ```bash
-AI_PROVIDER=openai AI_TOKEN=your_token npx sarraf . --ai
-AI_PROVIDER=anthropic AI_TOKEN=your_token npx sarraf . --ai
-AI_PROVIDER=gemini AI_TOKEN=your_token npx sarraf . --ai
+AI_PROVIDER=openai AI_TOKEN=your_token npx sadrazam . --ai
+AI_PROVIDER=anthropic AI_TOKEN=your_token npx sadrazam . --ai
+AI_PROVIDER=gemini AI_TOKEN=your_token npx sadrazam . --ai
 ```
 
 CLI overrides:
 
 ```bash
-npx sarraf . --ai --provider openai --model gpt-4.1
+npx sadrazam . --ai --provider openai --model gpt-4.1
 ```
 
 What AI currently does:
@@ -326,7 +326,7 @@ This runs repeatable checks for:
 
 ## Product Vision
 
-Sarraf aims to become a practical dependency audit tool for everyday JavaScript teams.
+Sadrazam aims to become a practical dependency audit tool for everyday JavaScript teams.
 
 Not a full software composition analysis platform.
 Not a vulnerability database replacement.
@@ -340,4 +340,4 @@ The goal is simpler and more useful in daily work:
 
 ## One-Line Pitch
 
-Sarraf is a CLI that finds unnecessary and risky npm packages, then goes further with optional AI-powered explanations and cleanup guidance.
+Sadrazam is a CLI that finds unnecessary and risky npm packages, then goes further with optional AI-powered explanations and cleanup guidance.

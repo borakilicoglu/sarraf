@@ -93,7 +93,7 @@ export function renderReport(input: RenderReportInput): string {
 
   const lines: string[] = [];
 
-  lines.push(pc.bold(pc.cyan("Sarraf Report")));
+  lines.push(pc.bold(pc.cyan("Sadrazam Report")));
   lines.push(`Target: ${input.targetDir}`);
   lines.push(`Workspaces: ${input.workspaces.length}`);
   lines.push(`Mode: ${describeMode(input)}`);

@@ -8,7 +8,7 @@ const cliPath = path.join(rootDir, "dist", "index.js");
 const fixtureDir = path.join(rootDir, "test", "fixtures", "config-project");
 
 describe("CLI", () => {
-  it("loads sarraf.json config and applies ignore/allowlist rules", () => {
+  it("loads sadrazam.json config and applies ignore/allowlist rules", () => {
     let stdout = "";
 
     try {

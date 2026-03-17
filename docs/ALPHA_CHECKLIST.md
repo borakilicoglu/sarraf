@@ -6,7 +6,7 @@ Target release: `v0.1.0-alpha.1`
 
 - CLI help is readable and examples are present
 - README documents config, reporters, tracing, strict mode, and AI usage
-- config loading works from `sarraf.json` and `package.json#sarraf`
+- config loading works from `sadrazam.json` and `package.json#sadrazam`
 - ignore and allowlist rules work as expected
 - JSON reporter is stable enough for automation
 

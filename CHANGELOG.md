@@ -23,7 +23,7 @@
 ## v0.1.0-alpha.3
 
 ### Changed
-- Switched the npm package name from `sarraf` to `kantar` for publish testing
+- Switched the npm package name from earlier publish test names to `kantar`
 
 ## v0.1.0-alpha.2
 
@@ -47,7 +47,7 @@
 - Script parser support for `package.json` scripts
 - Dependency trace output
 - Source mapping from build output back to source files
-- Config loading from `sarraf.json` and `package.json#sarraf`
+- Config loading from `sadrazam.json` and `package.json#sadrazam`
 - Ignore and allowlist controls for findings
 - AI-powered dependency summaries for OpenAI, Anthropic, and Gemini
 - Fixture tests and smoke test scenarios

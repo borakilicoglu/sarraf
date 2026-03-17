@@ -7,7 +7,7 @@ import { Command } from "commander";
 
 import { generateAiSummary } from "./aiClient.js";
 import { resolveAiConfig, SUPPORTED_AI_PROVIDERS } from "./aiConfig.js";
-import { loadSarrafConfig, type SarrafConfig } from "./config.js";
+import { loadSadrazamConfig, type SadrazamConfig } from "./config.js";
 import { getActiveFindings, type FindingRules } from "./findings.js";
 import {
   renderReport,
@@ -28,7 +28,7 @@ const SUPPORTED_FINDING_TYPES: FindingType[] = [
 ];
 
 program
-  .name("sarraf")
+  .name("sadrazam")
   .description("Analyze dependency usage, detect hygiene issues, and trace why packages are used.")
   .argument("[target]", "directory to scan", ".")
   .option("--ai", "enable AI-assisted analysis")
@@ -51,18 +51,18 @@ program
     "after",
     `
 Examples:
-  sarraf .
-  sarraf . --reporter json
-  sarraf . --trace typescript
-  sarraf . --workspace packages/web
-  sarraf . --production --strict
-  AI_PROVIDER=openai AI_TOKEN=... sarraf . --ai
+  sadrazam .
+  sadrazam . --reporter json
+  sadrazam . --trace typescript
+  sadrazam . --workspace packages/web
+  sadrazam . --production --strict
+  AI_PROVIDER=openai AI_TOKEN=... sadrazam . --ai
 `,
   )
   .action(async (target, options) => {
     try {
       const targetDir = path.resolve(target);
-      const loadedConfig = await loadSarrafConfig(targetDir);
+      const loadedConfig = await loadSadrazamConfig(targetDir);
       const mergedOptions = mergeCliWithConfig(options, loadedConfig.config);
       const aiConfig = resolveAiConfig({
         ai: mergedOptions.ai,
@@ -213,7 +213,7 @@ interface CliOptions {
   allowMisplacedDevDependencies: string | undefined;
 }
 
-function mergeCliWithConfig(rawOptions: Record<string, unknown>, config: SarrafConfig): CliOptions {
+function mergeCliWithConfig(rawOptions: Record<string, unknown>, config: SadrazamConfig): CliOptions {
   return {
     ai: Boolean(rawOptions.ai),
     provider: asOptionalString(rawOptions.provider) ?? config.ai?.provider,

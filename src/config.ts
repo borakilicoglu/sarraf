@@ -4,7 +4,7 @@ import path from "node:path";
 import type { FindingType, ReporterType } from "./reporters.js";
 import { findNearestPackageJson, readPackageJson } from "./packageReader.js";
 
-export interface SarrafConfig {
+export interface SadrazamConfig {
   reporter?: ReporterType;
   include?: FindingType[];
   exclude?: FindingType[];
@@ -24,18 +24,18 @@ export interface SarrafConfig {
   };
 }
 
-export interface LoadedSarrafConfig {
-  config: SarrafConfig;
+export interface LoadedSadrazamConfig {
+  config: SadrazamConfig;
   source: string;
 }
 
-interface PackageJsonWithSarraf {
-  sarraf?: SarrafConfig;
+interface PackageJsonWithSadrazam {
+  sadrazam?: SadrazamConfig;
 }
 
-const CONFIG_FILENAMES = ["sarraf.json"];
+const CONFIG_FILENAMES = ["sadrazam.json"];
 
-export async function loadSarrafConfig(startDir: string): Promise<LoadedSarrafConfig> {
+export async function loadSadrazamConfig(startDir: string): Promise<LoadedSadrazamConfig> {
   const packagePath = await findNearestPackageJson(startDir);
   const packageDir = path.dirname(packagePath);
 
@@ -44,16 +44,16 @@ export async function loadSarrafConfig(startDir: string): Promise<LoadedSarrafCo
 
     if (await fileExists(configPath)) {
       return {
-        config: JSON.parse(await readFile(configPath, "utf8")) as SarrafConfig,
+        config: JSON.parse(await readFile(configPath, "utf8")) as SadrazamConfig,
         source: configPath,
       };
     }
   }
 
-  const packageJson = (await readPackageJson(packagePath)) as PackageJsonWithSarraf;
+  const packageJson = (await readPackageJson(packagePath)) as PackageJsonWithSadrazam;
   return {
-    config: packageJson.sarraf ?? {},
-    source: packageJson.sarraf ? `${packagePath}#sarraf` : "defaults",
+    config: packageJson.sadrazam ?? {},
+    source: packageJson.sadrazam ? `${packagePath}#sadrazam` : "defaults",
   };
 }
 
