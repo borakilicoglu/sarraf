@@ -5,6 +5,20 @@
 ### Added
 - Repository contribution and release rules in `AGENTS.md`
 
+## v0.1.0-alpha.2
+
+### Added
+- GitHub Actions workflows for docs validation and tagged npm publishing
+- Vitest-based test runner setup
+- MIT license file and package publish metadata cleanup
+
+### Changed
+- Limited published package contents to production artifacts and top-level docs
+- Strengthened alpha release preparation flow for automated npm publishing
+
+### Fixed
+- Removed accidental token-like content from the publish workflow before release
+
 ## v0.1.0-alpha.1
 
 ### Added
