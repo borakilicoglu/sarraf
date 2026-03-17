@@ -11,7 +11,7 @@
     "dev": "tsx src/index.ts .",
     "scan": "tsx src/index.ts .",
     "smoke": "npm run build && node scripts/smoke.mjs",
-    "test": "npm run build && node --test test/**/*.test.mjs",
+    "test": "npm run build && vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "keywords": [
@@ -31,7 +31,7 @@
   "bugs": {
     "url": "https://github.com/borakilicoglu/sarraf/issues"
   },
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "commander": "^14.0.3",
@@ -41,6 +41,7 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   }
 }

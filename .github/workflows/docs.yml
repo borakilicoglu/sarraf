@@ -1,0 +1,38 @@
+name: Validate Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+
+      - name: Verify required docs exist
+        shell: bash
+        run: |
+          test -f README.md
+          test -f CHANGELOG.md
+          test -f docs/ALPHA_CHECKLIST.md
+
+      - name: Verify README release sections
+        shell: bash
+        run: |
+          grep -q "## Quick Start" README.md
+          grep -q "## Exit Codes" README.md
+          grep -q "## Known Limitations" README.md
