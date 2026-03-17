@@ -18,7 +18,10 @@
     "scan": "tsx src/index.ts .",
     "smoke": "npm run build && node scripts/smoke.mjs",
     "test": "npm run build && vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "keywords": [
     "dependency-analysis",
@@ -48,6 +51,7 @@
     "@types/node": "^25.5.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
+    "vitepress": "^1.6.4",
     "vitest": "^4.1.0"
   }
 }

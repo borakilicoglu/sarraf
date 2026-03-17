@@ -4,6 +4,8 @@
 
 Sadrazam is a dependency analysis CLI for JavaScript and TypeScript projects with optional AI-powered insights.
 
+Documentation: https://borakilicoglu.github.io/sadrazam/
+
 Sadrazam scans your dependencies like a jeweler inspects gold. It finds unused packages, flags dependency hygiene issues, and, when you provide an AI token, can explain findings and suggest cleanup actions directly in the CLI.
 
 Current status:
