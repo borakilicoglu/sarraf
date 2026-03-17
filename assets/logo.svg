@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Sadrazam logo</title>
-  <desc id="desc">A gold-toned rounded square containing a faceted gemstone and jeweler's loupe.</desc>
+  <desc id="desc">A rounded teal square containing a bold S monogram.</desc>
   <defs>
     <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#14b8a6"/>
@@ -8,14 +8,22 @@
     </linearGradient>
   </defs>
   <rect x="24" y="24" width="464" height="464" rx="96" fill="url(#bg)"/>
-  <g fill="#fff" stroke="#fff" stroke-linejoin="round" stroke-linecap="round">
-    <path opacity="0.95" stroke-width="10" d="M166 163h180l52 68-142 136L114 231z"/>
-    <path opacity="0.78" stroke-width="8" fill="none" d="M166 163l90 204 90-204"/>
-    <path opacity="0.78" stroke-width="8" fill="none" d="M204 163l52 68 52-68"/>
-    <path opacity="0.78" stroke-width="8" fill="none" d="M114 231h284"/>
-    <circle cx="344" cy="320" r="54" opacity="0.18" stroke-width="18"/>
-    <circle cx="344" cy="320" r="46" opacity="0.96" fill="none" stroke-width="14"/>
-    <path opacity="0.96" stroke-width="18" d="M379 355l39 39"/>
-    <path opacity="0.96" stroke-width="12" d="M162 110l10 28 28 10-28 10-10 28-10-28-28-10 28-10z"/>
-  </g>
+  <path
+    d="M346 148H214c-42 0-76 29-76 67 0 38 28 58 72 68l52 11c26 5 40 13 40 28 0 17-17 30-43 30H130"
+    fill="none"
+    opacity="0.96"
+    stroke="#fff"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="48"
+  />
+  <path
+    d="M166 364h132c42 0 76-29 76-67 0-38-28-58-72-68l-52-11c-26-5-40-13-40-28 0-17 17-30 43-30h129"
+    fill="none"
+    opacity="0.96"
+    stroke="#fff"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="48"
+  />
 </svg>
