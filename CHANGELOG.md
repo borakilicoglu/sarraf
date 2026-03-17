@@ -5,6 +5,12 @@
 ### Added
 - Repository contribution and release rules in `AGENTS.md`
 
+## v0.1.0-alpha.7
+
+### Changed
+- Renamed the CLI, config surface, docs, and package metadata from `sarraf` to `sadrazam`
+- Updated repository metadata to the `borakilicoglu/sadrazam` GitHub repository
+
 ## v0.1.0-alpha.6
 
 ### Changed
