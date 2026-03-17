@@ -24,13 +24,18 @@ export interface SarrafConfig {
   };
 }
 
+export interface LoadedSarrafConfig {
+  config: SarrafConfig;
+  source: string;
+}
+
 interface PackageJsonWithSarraf {
   sarraf?: SarrafConfig;
 }
 
 const CONFIG_FILENAMES = ["sarraf.json"];
 
-export async function loadSarrafConfig(startDir: string): Promise<SarrafConfig> {
+export async function loadSarrafConfig(startDir: string): Promise<LoadedSarrafConfig> {
   const packagePath = await findNearestPackageJson(startDir);
   const packageDir = path.dirname(packagePath);
 
@@ -38,12 +43,18 @@ export async function loadSarrafConfig(startDir: string): Promise<SarrafConfig> 
     const configPath = path.join(packageDir, filename);
 
     if (await fileExists(configPath)) {
-      return JSON.parse(await readFile(configPath, "utf8")) as SarrafConfig;
+      return {
+        config: JSON.parse(await readFile(configPath, "utf8")) as SarrafConfig,
+        source: configPath,
+      };
     }
   }
 
   const packageJson = (await readPackageJson(packagePath)) as PackageJsonWithSarraf;
-  return packageJson.sarraf ?? {};
+  return {
+    config: packageJson.sarraf ?? {},
+    source: packageJson.sarraf ? `${packagePath}#sarraf` : "defaults",
+  };
 }
 
 async function fileExists(filePath: string): Promise<boolean> {

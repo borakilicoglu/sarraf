@@ -1,0 +1,60 @@
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+
+const rootDir = process.cwd();
+const cliPath = path.join(rootDir, "dist", "index.js");
+
+const scenarios = [
+  {
+    name: "config-project",
+    cwd: path.join(rootDir, "test", "fixtures", "config-project"),
+    args: ["--reporter", "json"],
+    validate(report) {
+      assert.equal(report.workspaces.length, 1);
+      assert.equal(report.workspaces[0].summary.findings, 0);
+    },
+  },
+  {
+    name: "cjs-project",
+    cwd: path.join(rootDir, "test", "fixtures", "cjs-project"),
+    args: ["--reporter", "json"],
+    validate(report) {
+      const workspace = report.workspaces[0];
+      assert.equal(workspace.summary.findings, 0);
+      assert.ok(workspace.externalImports.includes("chalk"));
+      assert.ok(workspace.externalImports.includes("commander"));
+    },
+  },
+  {
+    name: "monorepo-project",
+    cwd: path.join(rootDir, "test", "fixtures", "monorepo-project"),
+    args: ["--reporter", "json"],
+    validate(report) {
+      assert.equal(report.workspaces.length, 2);
+      const workspaceNames = report.workspaces.map((workspace) => workspace.workspace.name).sort();
+      assert.deepEqual(workspaceNames, ["@acme/shared", "@acme/web"]);
+    },
+  },
+];
+
+for (const scenario of scenarios) {
+  const report = runScenario(scenario.cwd, scenario.args);
+  scenario.validate(report);
+  console.log(`ok ${scenario.name}`);
+}
+
+function runScenario(cwd, args) {
+  let stdout = "";
+
+  try {
+    stdout = execFileSync("node", [cliPath, ".", ...args], {
+      cwd,
+      encoding: "utf8",
+    });
+  } catch (error) {
+    stdout = error.stdout;
+  }
+
+  return JSON.parse(stdout);
+}

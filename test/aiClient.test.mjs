@@ -62,3 +62,31 @@ test("generates AI summary from OpenAI-style response", async () => {
     global.fetch = originalFetch;
   }
 });
+
+test("returns helpful auth error message for failed AI requests", async () => {
+  const originalFetch = global.fetch;
+
+  global.fetch = async () =>
+    new Response(JSON.stringify({ error: { message: "bad key" } }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+
+  try {
+    await assert.rejects(
+      () =>
+        generateAiSummary(
+          {
+            enabled: true,
+            provider: "openai",
+            token: "bad-token",
+            model: "gpt-4.1",
+          },
+          [],
+        ),
+      /AI authentication failed/,
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

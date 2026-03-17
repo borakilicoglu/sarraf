@@ -1,0 +1,9 @@
+{
+  "name": "cjs-project",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "chalk": "^5.0.0",
+    "commander": "^14.0.0"
+  }
+}

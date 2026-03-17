@@ -1,5 +1,4 @@
-import type { AiConfig, AiProvider } from "./aiConfig.js";
-import type { ActiveFinding } from "./reporters.js";
+import type { AiConfig } from "./aiConfig.js";
 import type { ReportWorkspace } from "./reporters.js";
 
 export async function generateAiSummary(
@@ -43,7 +42,7 @@ function buildPrompt(workspaces: ReportWorkspace[]): string {
 }
 
 async function callOpenAI(config: AiConfig, prompt: string): Promise<string> {
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await requestJson("openai", "https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${config.token}`,
@@ -59,7 +58,7 @@ async function callOpenAI(config: AiConfig, prompt: string): Promise<string> {
 }
 
 async function callAnthropic(config: AiConfig, prompt: string): Promise<string> {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await requestJson("anthropic", "https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "x-api-key": config.token,
@@ -83,7 +82,8 @@ async function callAnthropic(config: AiConfig, prompt: string): Promise<string> 
 
 async function callGemini(config: AiConfig, prompt: string): Promise<string> {
   const model = config.model ?? "gemini-2.5-flash";
-  const response = await fetch(
+  const response = await requestJson(
+    "gemini",
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     {
       method: "POST",
@@ -108,10 +108,23 @@ async function parseJsonResponse(response: Response): Promise<unknown> {
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(`AI request failed (${response.status}): ${JSON.stringify(payload)}`);
+    throw new Error(describeHttpFailure(response.status, payload));
   }
 
   return payload;
+}
+
+async function requestJson(
+  provider: string,
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`AI request to ${provider} failed before a response was received: ${message}`);
+  }
 }
 
 function parseOpenAIResponse(payload: unknown): string {
@@ -175,4 +188,20 @@ function parseGeminiResponse(payload: unknown): string {
   }
 
   return text;
+}
+
+function describeHttpFailure(status: number, payload: unknown): string {
+  if (status === 401 || status === 403) {
+    return `AI authentication failed (${status}). Check AI_TOKEN and provider configuration.`;
+  }
+
+  if (status === 429) {
+    return `AI rate limit exceeded (${status}). Try again later or reduce request frequency.`;
+  }
+
+  if (status >= 500) {
+    return `AI provider error (${status}). Try again later.`;
+  }
+
+  return `AI request failed (${status}): ${JSON.stringify(payload)}`;
 }

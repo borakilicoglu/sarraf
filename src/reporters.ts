@@ -35,6 +35,15 @@ export interface RenderReportInput {
   workspaces: ReportWorkspace[];
   trace?: string;
   aiSummary?: string;
+  warnings?: string[];
+  configSource?: string;
+  rulesSummary?: {
+    ignorePackages: string[];
+    allowUnusedDependencies: string[];
+    allowUnusedDevDependencies: string[];
+    allowMissingPackages: string[];
+    allowMisplacedDevDependencies: string[];
+  };
   ai?: {
     provider: string;
     model?: string;
@@ -55,6 +64,9 @@ export function renderReport(input: RenderReportInput): string {
         },
         ai: input.ai ?? null,
         aiSummary: input.aiSummary ?? null,
+        warnings: input.warnings ?? [],
+        configSource: input.configSource ?? null,
+        rulesSummary: input.rulesSummary ?? null,
         workspaces: input.workspaces.map(({ workspace, result, findings }) => ({
           workspace,
           summary: {
@@ -85,6 +97,15 @@ export function renderReport(input: RenderReportInput): string {
   lines.push(`Target: ${input.targetDir}`);
   lines.push(`Workspaces: ${input.workspaces.length}`);
   lines.push(`Mode: ${describeMode(input)}`);
+
+  if (input.warnings && input.warnings.length > 0) {
+    lines.push("");
+    lines.push(pc.yellow("Warnings"));
+
+    for (const warning of input.warnings) {
+      lines.push(`- ${warning}`);
+    }
+  }
 
   if (input.ai) {
     lines.push("");
@@ -151,9 +172,34 @@ export function renderReport(input: RenderReportInput): string {
   if (input.debug) {
     lines.push("");
     lines.push(pc.dim("Debug"));
+    lines.push(pc.dim(`Config source: ${input.configSource ?? "defaults"}`));
     lines.push(pc.dim(`Reporter: ${input.reporter}`));
     lines.push(pc.dim(`Include: ${input.include.join(", ") || "-"}`));
     lines.push(pc.dim(`Exclude: ${input.exclude.join(", ") || "-"}`));
+    lines.push(pc.dim(`Trace: ${input.trace ?? "-"}`));
+    if (input.rulesSummary) {
+      lines.push(pc.dim(`Ignore packages: ${input.rulesSummary.ignorePackages.join(", ") || "-"}`));
+      lines.push(
+        pc.dim(
+          `Allow unused dependencies: ${input.rulesSummary.allowUnusedDependencies.join(", ") || "-"}`,
+        ),
+      );
+      lines.push(
+        pc.dim(
+          `Allow unused devDependencies: ${input.rulesSummary.allowUnusedDevDependencies.join(", ") || "-"}`,
+        ),
+      );
+      lines.push(
+        pc.dim(
+          `Allow missing packages: ${input.rulesSummary.allowMissingPackages.join(", ") || "-"}`,
+        ),
+      );
+      lines.push(
+        pc.dim(
+          `Allow misplaced devDependencies: ${input.rulesSummary.allowMisplacedDevDependencies.join(", ") || "-"}`,
+        ),
+      );
+    }
   }
 
   return lines.join("\n");

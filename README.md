@@ -105,7 +105,25 @@ or run it without a global install:
 npx sarraf .
 ```
 
+## Quick Start
+
+```bash
+npx sarraf .
+npx sarraf . --reporter json
+npx sarraf . --trace typescript
+AI_PROVIDER=openai AI_TOKEN=your_token npx sarraf . --ai
+```
+
 ## Usage
+
+Common scenarios:
+
+- scan a single package
+- scan one workspace inside a monorepo
+- export findings as JSON
+- trace why a package is treated as used
+- run in production or strict mode
+- enrich the report with AI summaries
 
 Scan the current project:
 
@@ -171,6 +189,7 @@ Useful local examples:
 node dist/index.js . --debug
 node dist/index.js . --exclude unused-devDependencies
 node dist/index.js . --reporter json --trace commander
+node dist/index.js . --ignore-packages react --allow-unused-dev-dependencies typescript
 ```
 
 ## Config
@@ -202,6 +221,14 @@ Example `sarraf.json`:
 ```
 
 CLI flags take precedence over config values.
+
+## Exit Codes
+
+Sarraf uses these exit codes:
+
+- `0`: scan completed and no findings were reported
+- `1`: execution error, invalid configuration, or unrecoverable runtime failure
+- `2`: scan completed and findings were reported
 
 ## Ignore And Allowlist
 
@@ -261,6 +288,7 @@ What AI does not yet do:
 - automatic fixes
 - package reputation or security scoring
 - multi-step remediation planning
+- guaranteed deterministic recommendations across providers
 
 ## Testing
 
@@ -269,12 +297,32 @@ Local verification includes fixture-based tests for:
 - config loading
 - ignore and allowlist behavior
 - AI response parsing
+- AI auth error handling
 
 Run:
 
 ```bash
 npm test
 ```
+
+Smoke scenarios:
+
+```bash
+npm run smoke
+```
+
+This runs repeatable checks for:
+
+- single-package config-driven repo
+- CommonJS repo
+- monorepo with multiple workspaces
+
+## Known Limitations
+
+- AI summaries depend on third-party provider behavior and network availability
+- source mapping uses source maps first and path heuristics second
+- misplaced dependency detection is intentionally conservative
+- dependency analysis is strongest for standard JS/TS project layouts
 
 ## Product Vision
 

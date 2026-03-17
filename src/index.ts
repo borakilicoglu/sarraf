@@ -29,7 +29,7 @@ const SUPPORTED_FINDING_TYPES: FindingType[] = [
 
 program
   .name("sarraf")
-  .description("Scan a project and summarize import usage.")
+  .description("Analyze dependency usage, detect hygiene issues, and trace why packages are used.")
   .argument("[target]", "directory to scan", ".")
   .option("--ai", "enable AI-assisted analysis")
   .option("--provider <provider>", `AI provider (${SUPPORTED_AI_PROVIDERS.join(", ")})`)
@@ -47,16 +47,28 @@ program
   .option("--allow-unused-dev-dependencies <names>", "comma-separated devDependency allowlist")
   .option("--allow-missing-packages <names>", "comma-separated missing package allowlist")
   .option("--allow-misplaced-dev-dependencies <names>", "comma-separated misplaced devDependency allowlist")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  sarraf .
+  sarraf . --reporter json
+  sarraf . --trace typescript
+  sarraf . --workspace packages/web
+  sarraf . --production --strict
+  AI_PROVIDER=openai AI_TOKEN=... sarraf . --ai
+`,
+  )
   .action(async (target, options) => {
     try {
       const targetDir = path.resolve(target);
-      const config = await loadSarrafConfig(targetDir);
-      const mergedOptions = mergeCliWithConfig(options, config);
+      const loadedConfig = await loadSarrafConfig(targetDir);
+      const mergedOptions = mergeCliWithConfig(options, loadedConfig.config);
       const aiConfig = resolveAiConfig({
         ai: mergedOptions.ai,
         provider: mergedOptions.provider,
         model: mergedOptions.model,
-        configAi: config.ai,
+        configAi: loadedConfig.config.ai,
       });
       const reporter = parseReporter(mergedOptions.reporter);
       const include = parseFindingTypes(mergedOptions.include);
@@ -79,7 +91,18 @@ program
           };
         }),
       );
-      const aiSummary = aiConfig ? await generateAiSummary(aiConfig, workspaceReports) : undefined;
+      const warnings: string[] = [];
+      let aiSummary: string | undefined;
+
+      if (aiConfig) {
+        try {
+          aiSummary = await generateAiSummary(aiConfig, workspaceReports);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          warnings.push(`AI summary unavailable: ${message}`);
+        }
+      }
+
       const report = renderReport({
         targetDir: rootDir,
         reporter,
@@ -89,6 +112,15 @@ program
         include,
         exclude,
         workspaces: workspaceReports,
+        configSource: loadedConfig.source,
+        rulesSummary: {
+          ignorePackages: rules.ignorePackages,
+          allowUnusedDependencies: rules.allowUnusedDependencies,
+          allowUnusedDevDependencies: rules.allowUnusedDevDependencies,
+          allowMissingPackages: rules.allowMissingPackages,
+          allowMisplacedDevDependencies: rules.allowMisplacedDevDependencies,
+        },
+        ...(warnings.length > 0 ? { warnings } : {}),
         ...(mergedOptions.trace ? { trace: String(mergedOptions.trace) } : {}),
         ...(aiSummary ? { aiSummary } : {}),
         ...(aiConfig
