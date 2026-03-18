@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.1.4
+
+### Added
+- Catalog support for named package and entry-file groups in Sadrazam config
+
+### Changed
+- Resolve catalog references in rules and plugin inputs
+- Report unused catalog entries as configuration hints
+
 ## v0.1.3
 
 ### Added
