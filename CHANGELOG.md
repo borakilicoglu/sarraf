@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.1.0-beta.6
+
+### Added
+- Unused export detection for reachable local modules
+
+### Changed
+- Added parser, CLI coverage, and smoke fixtures for export-level analysis
+
 ## v0.1.0-beta.5
 
 ### Added
