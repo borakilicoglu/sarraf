@@ -7,6 +7,7 @@ import { readScanCache, writeScanCache } from "./cache.js";
 import { findSourceFiles } from "./fileFinder.js";
 import { parseImports } from "./importParser.js";
 import { readPackageMetadata } from "./packageReader.js";
+import { analyzePlugins } from "./plugins.js";
 import { parseExportedNames, parseLocalReferences, type LocalReference } from "./symbolParser.js";
 import { parsePackageScripts } from "./scriptParser.js";
 import { mapToSourcePath } from "./sourceMapper.js";
@@ -57,6 +58,7 @@ export interface ScanResult {
   packagePath: string;
   files: FileScanResult[];
   externalImports: string[];
+  activePlugins: string[];
   scriptCommandPackages: string[];
   scriptEntryFiles: string[];
   packageTraces: Record<string, string[]>;
@@ -90,12 +92,12 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
   const discoverInputsMs = nodePerformance.now() - discoverInputsStart;
 
   const scriptParseStart = nodePerformance.now();
-  const scriptAnalysis = await parsePackageScripts(
-    packageMetadata.packageDir,
-    packageMetadata.scripts,
-  );
+  const [scriptAnalysis, pluginAnalysis] = await Promise.all([
+    parsePackageScripts(packageMetadata.packageDir, packageMetadata.scripts),
+    analyzePlugins({ packageDir: packageMetadata.packageDir, scripts: packageMetadata.scripts }),
+  ]);
   const scriptParseMs = nodePerformance.now() - scriptParseStart;
-  const allFiles = mergeFiles(files, scriptAnalysis.fileEntries);
+  const allFiles = mergeFiles(files, scriptAnalysis.fileEntries, pluginAnalysis.fileEntries);
 
   const selectedFiles = options.production || options.strict
     ? allFiles.filter((filePath) => isProductionFilePath(absoluteRoot, filePath))
@@ -155,8 +157,10 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
   const readFilesMs = nodePerformance.now() - readFilesStart;
 
   const analysisStart = nodePerformance.now();
-  const externalImports = collectExternalImports(fileResults, scriptAnalysis.commandPackages);
-  const packageTraces = collectPackageTraces(fileResults, scriptAnalysis.commandUsage);
+  const commandPackages = mergeStringLists(scriptAnalysis.commandPackages, pluginAnalysis.commandPackages);
+  const commandUsage = mergeCommandUsage(scriptAnalysis.commandUsage, pluginAnalysis.commandUsage);
+  const externalImports = collectExternalImports(fileResults, commandPackages);
+  const packageTraces = collectPackageTraces(fileResults, commandUsage);
   const exportTraces = collectExportTraces(
     absoluteRoot,
     fileResults,
@@ -182,7 +186,10 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
   const misplacedDevDependencies = options.strict
     ? getMisplacedDevDependencies(fileResults, packageMetadata.devDependencies)
     : [];
-  const scriptEntryFiles = await mapScriptEntryFiles(absoluteRoot, scriptAnalysis.fileEntries);
+  const scriptEntryFiles = await mapScriptEntryFiles(
+    absoluteRoot,
+    mergeFiles(scriptAnalysis.fileEntries, pluginAnalysis.fileEntries),
+  );
   const unusedFiles = getUnusedFiles(
     absoluteRoot,
     fileResults,
@@ -202,7 +209,8 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
     packagePath: packageMetadata.packagePath,
     files: fileResults,
     externalImports,
-    scriptCommandPackages: scriptAnalysis.commandPackages,
+    activePlugins: pluginAnalysis.activePlugins,
+    scriptCommandPackages: commandPackages,
     scriptEntryFiles,
     packageTraces,
     exportTraces,
@@ -237,6 +245,34 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
     },
     memory: getProcessMemoryUsage(),
   };
+}
+
+function mergeStringLists(...lists: string[][]): string[] {
+  return [...new Set(lists.flat())].sort();
+}
+
+function mergeCommandUsage(
+  ...usages: Array<Record<string, string[]>>
+): Record<string, string[]> {
+  const merged = new Map<string, Set<string>>();
+
+  for (const usage of usages) {
+    for (const [packageName, sources] of Object.entries(usage)) {
+      const entries = merged.get(packageName) ?? new Set<string>();
+
+      for (const source of sources) {
+        entries.add(source);
+      }
+
+      merged.set(packageName, entries);
+    }
+  }
+
+  return Object.fromEntries(
+    [...merged.entries()]
+      .map(([packageName, sources]) => [packageName, [...sources].sort()] as const)
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
 }
 
 function collectExternalImports(files: FileScanResult[], scriptPackages: string[]): string[] {
@@ -646,8 +682,8 @@ function isBuiltinPackage(packageName: string): boolean {
   return builtinModules.includes(packageName) || builtinModules.includes(packageName.replace(/^node:/, ""));
 }
 
-function mergeFiles(files: string[], extraFiles: string[]): string[] {
-  return [...new Set([...files, ...extraFiles])].sort();
+function mergeFiles(...fileGroups: string[][]): string[] {
+  return [...new Set(fileGroups.flat())].sort();
 }
 
 async function mapScriptEntryFiles(rootDir: string, fileEntries: string[]): Promise<string[]> {

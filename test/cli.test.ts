@@ -128,6 +128,22 @@ describe("CLI", () => {
   });
 
 
+
+  it("detects built-in plugin package usage from tool-specific CLI arguments", () => {
+    const report = runJsonReport("plugin-project");
+    const workspace = report.workspaces[0];
+
+    expect(workspace.summary.activePlugins).toEqual(["eslint", "prettier"]);
+    expect(workspace.findings).toEqual([]);
+    expect(workspace.externalImports).toEqual([
+      "@typescript-eslint/parser",
+      "eslint",
+      "eslint-plugin-react-hooks",
+      "prettier",
+      "prettier-plugin-tailwindcss",
+    ]);
+  });
+
   it("scans svelte, vue, mdx, and astro files for dependency imports", () => {
     const report = runJsonReport("compiler-project");
     const workspace = report.workspaces[0];

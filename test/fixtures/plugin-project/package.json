@@ -1,0 +1,15 @@
+{
+  "name": "plugin-project",
+  "version": "1.0.0",
+  "scripts": {
+    "format": "prettier --plugin prettier-plugin-tailwindcss --config ./config/prettier.config.cjs src/index.ts",
+    "lint": "eslint --parser @typescript-eslint/parser --plugin react-hooks src/index.ts"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "prettier": "^3.0.0",
+    "prettier-plugin-tailwindcss": "^0.6.0"
+  }
+}

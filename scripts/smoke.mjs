@@ -48,6 +48,23 @@ const scenarios = [
     },
   },
   {
+    name: "plugin-project",
+    cwd: path.join(rootDir, "test", "fixtures", "plugin-project"),
+    args: ["--reporter", "json"],
+    validate(report) {
+      const workspace = report.workspaces[0];
+      assert.equal(workspace.summary.findings, 0);
+      assert.deepEqual(workspace.summary.activePlugins, ["eslint", "prettier"]);
+      assert.deepEqual(workspace.externalImports, [
+        "@typescript-eslint/parser",
+        "eslint",
+        "eslint-plugin-react-hooks",
+        "prettier",
+        "prettier-plugin-tailwindcss",
+      ]);
+    },
+  },
+  {
     name: "compiler-project",
     cwd: path.join(rootDir, "test", "fixtures", "compiler-project"),
     args: ["--reporter", "json"],

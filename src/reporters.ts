@@ -97,6 +97,7 @@ export function renderReport(input: RenderReportInput): string {
             filesScanned: result.files.length,
             externalPackagesUsed: result.externalImports.length,
             findings: findings.reduce((sum, finding) => sum + finding.items.length, 0),
+            activePlugins: result.activePlugins,
             scriptCommandPackages: result.scriptCommandPackages,
             scriptEntryFiles: result.scriptEntryFiles,
             cached: result.cached,
@@ -195,6 +196,9 @@ export function renderReport(input: RenderReportInput): string {
     lines.push(`Findings: ${findingCount}`);
     if (input.cache) {
       lines.push(`Cache: ${result.cached ? "hit" : "miss"}`);
+    }
+    if (result.activePlugins.length > 0) {
+      lines.push(`Plugins: ${result.activePlugins.join(", ")}`);
     }
     if (result.scriptCommandPackages.length > 0) {
       lines.push(`Script packages: ${result.scriptCommandPackages.join(", ")}`);
