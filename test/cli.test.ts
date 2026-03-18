@@ -150,6 +150,7 @@ describe("CLI", () => {
           packagePath,
           removedDependencies: ["react"],
           removedDevDependencies: ["eslint"],
+          formattedFiles: [],
         },
       ]);
       expect(report.workspaces[0].findings).toEqual([]);
@@ -162,6 +163,67 @@ describe("CLI", () => {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it("formats modified package.json files when format mode is enabled", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "sadrazam-format-"));
+    const tempProject = path.join(tempRoot, "project");
+
+    cpSync(path.join(rootDir, "test", "fixtures", "config-project"), tempProject, { recursive: true });
+
+    try {
+      const packagePath = path.join(tempProject, "package.json");
+      const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
+        scripts: Record<string, string>;
+        dependencies: Record<string, string>;
+        devDependencies: Record<string, string>;
+      };
+
+      packageJson.scripts = {
+        dev: packageJson.scripts.dev,
+        build: packageJson.scripts.build,
+      };
+      packageJson.dependencies = {
+        react: "^19.0.0",
+        commander: packageJson.dependencies.commander,
+      };
+      packageJson.devDependencies = {
+        typescript: packageJson.devDependencies.typescript,
+        eslint: "^9.0.0",
+        tsx: packageJson.devDependencies.tsx,
+      };
+
+      writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}
+`, "utf8");
+      writeFileSync(
+        path.join(tempProject, "sadrazam.json"),
+        `${JSON.stringify({ reporter: "json" }, null, 2)}
+`,
+        "utf8",
+      );
+
+      const report = runJsonReportForDir(tempProject, ["--fix", "--format"]);
+      const formattedPackageJsonText = readFileSync(packagePath, "utf8");
+
+      expect(report.mode.fix).toBe(true);
+      expect(report.mode.format).toBe(true);
+      expect(report.appliedFixes).toEqual([
+        {
+          packagePath,
+          removedDependencies: ["react"],
+          removedDevDependencies: ["eslint"],
+          formattedFiles: [packagePath],
+        },
+      ]);
+      expect(formattedPackageJsonText.indexOf('"build"')).toBeLessThan(formattedPackageJsonText.indexOf('"dev"'));
+      expect(formattedPackageJsonText.indexOf('"commander"')).toBeLessThan(formattedPackageJsonText.indexOf('"react"') === -1 ? formattedPackageJsonText.length : formattedPackageJsonText.indexOf('"react"'));
+      expect(formattedPackageJsonText.indexOf('"tsx"')).toBeLessThan(formattedPackageJsonText.indexOf('"typescript"'));
+      expect(formattedPackageJsonText).not.toContain('"react"');
+      expect(formattedPackageJsonText).not.toContain('"eslint"');
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
 
   it("discovers pnpm workspaces and respects local workspace dependencies", () => {
     const report = runJsonReport("monorepo-project");

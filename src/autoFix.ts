@@ -6,21 +6,64 @@ import type { ActiveFinding, ReportWorkspace } from "./reporters.js";
 interface MutablePackageJson {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+  scripts?: Record<string, string>;
   [key: string]: unknown;
 }
+
+const TOP_LEVEL_KEY_ORDER = [
+  "name",
+  "version",
+  "private",
+  "type",
+  "description",
+  "main",
+  "module",
+  "types",
+  "typings",
+  "browser",
+  "exports",
+  "bin",
+  "scripts",
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+  "keywords",
+  "author",
+  "repository",
+  "homepage",
+  "bugs",
+  "license",
+  "sadrazam",
+] as const;
 
 export interface AppliedFixSummary {
   packagePath: string;
   removedDependencies: string[];
   removedDevDependencies: string[];
+  formattedFiles: string[];
 }
 
-export async function applyAutoFixes(workspaces: ReportWorkspace[]): Promise<AppliedFixSummary[]> {
-  const summaries = await Promise.all(workspaces.map((workspace) => applyWorkspaceFixes(workspace)));
+export interface AutoFixOptions {
+  format?: boolean;
+}
+
+export async function applyAutoFixes(
+  workspaces: ReportWorkspace[],
+  options: AutoFixOptions = {},
+): Promise<AppliedFixSummary[]> {
+  const summaries = await Promise.all(
+    workspaces.map((workspace) => applyWorkspaceFixes(workspace, options)),
+  );
   return summaries.filter((summary): summary is AppliedFixSummary => summary !== null);
 }
 
-async function applyWorkspaceFixes(workspace: ReportWorkspace): Promise<AppliedFixSummary | null> {
+async function applyWorkspaceFixes(
+  workspace: ReportWorkspace,
+  options: AutoFixOptions,
+): Promise<AppliedFixSummary | null> {
   const unusedDependencies = getFindingItems(workspace.findings, "unused-dependencies");
   const unusedDevDependencies = getFindingItems(workspace.findings, "unused-devDependencies");
 
@@ -36,13 +79,20 @@ async function applyWorkspaceFixes(workspace: ReportWorkspace): Promise<AppliedF
     return null;
   }
 
-  await writeFile(workspace.result.packagePath, `${JSON.stringify(packageJson, null, 2)}
-`, "utf8");
+  const formattedPackageJson = options.format ? formatPackageJson(packageJson) : packageJson;
+
+  await writeFile(
+    workspace.result.packagePath,
+    `${JSON.stringify(formattedPackageJson, null, 2)}
+`,
+    "utf8",
+  );
 
   return {
     packagePath: workspace.result.packagePath,
     removedDependencies,
     removedDevDependencies,
+    formattedFiles: options.format ? [workspace.result.packagePath] : [],
   };
 }
 
@@ -72,4 +122,56 @@ function removePackageEntries(
   }
 
   return removed.sort();
+}
+
+function formatPackageJson(packageJson: MutablePackageJson): MutablePackageJson {
+  const normalized: Record<string, unknown> = {};
+  const preferredKeys = new Set<string>(TOP_LEVEL_KEY_ORDER);
+
+  for (const key of TOP_LEVEL_KEY_ORDER) {
+    if (!(key in packageJson)) {
+      continue;
+    }
+
+    normalized[key] = formatValue(key, packageJson[key]);
+  }
+
+  for (const key of Object.keys(packageJson).sort()) {
+    if (preferredKeys.has(key)) {
+      continue;
+    }
+
+    normalized[key] = formatValue(key, packageJson[key]);
+  }
+
+  return normalized as MutablePackageJson;
+}
+
+function formatValue(key: string, value: unknown): unknown {
+  if (isSortablePackageSection(key) && isStringRecord(value)) {
+    return sortStringRecord(value);
+  }
+
+  if (key === "scripts" && isStringRecord(value)) {
+    return sortStringRecord(value);
+  }
+
+  return value;
+}
+
+function isSortablePackageSection(key: string): key is "dependencies" | "devDependencies" | "peerDependencies" | "optionalDependencies" {
+  return key === "dependencies"
+    || key === "devDependencies"
+    || key === "peerDependencies"
+    || key === "optionalDependencies";
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function sortStringRecord(record: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(record).sort(([left], [right]) => left.localeCompare(right)),
+  );
 }

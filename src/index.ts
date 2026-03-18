@@ -71,6 +71,7 @@ program
   .option("--memory", "print memory usage information")
   .option("--cache", "reuse scan results when source inputs have not changed")
   .option("--fix", "auto-fix safe package.json issues")
+  .option("--format", "format files modified by --fix")
   .option("--watch", "re-run analysis when project files change")
   .option("--trace <package>", "trace where a package is used")
   .option("--trace-export <target>", "trace where an export is used (relativePath:exportName)")
@@ -89,6 +90,7 @@ Examples:
   sadrazam . --trace-export src/lib.ts:usedHelper
   sadrazam . --cache --performance
   sadrazam . --fix
+  sadrazam . --fix --format
   sadrazam . --memory
   sadrazam . --watch
   sadrazam . --workspace packages/web
@@ -131,6 +133,14 @@ async function runScanCommand(
       warnings.push("Auto-fix disabled in watch mode.");
     }
 
+    if (runtimeOptions.watchRun && mergedOptions.format) {
+      warnings.push("Formatting disabled in watch mode.");
+    }
+
+    if (mergedOptions.format && !mergedOptions.fix) {
+      warnings.push("--format only applies when --fix is enabled.");
+    }
+
     const aiConfig = resolveAiConfig({
       ai: aiEnabled,
       provider: mergedOptions.provider,
@@ -149,7 +159,9 @@ async function runScanCommand(
 
     let workspaceReports = await collectWorkspaceReports(workspaces, mergedOptions, loadedConfig.config, rules);
     const autoFixEnabled = Boolean(mergedOptions.fix) && !runtimeOptions.watchRun;
-    const appliedFixes = autoFixEnabled ? await applyAutoFixes(workspaceReports) : [];
+    const appliedFixes = autoFixEnabled
+      ? await applyAutoFixes(workspaceReports, { format: Boolean(mergedOptions.format) })
+      : [];
 
     if (appliedFixes.length > 0) {
       workspaceReports = await collectWorkspaceReports(workspaces, mergedOptions, loadedConfig.config, rules);
@@ -186,6 +198,7 @@ async function runScanCommand(
       watch: Boolean(mergedOptions.watch),
       cache: Boolean(mergedOptions.cache || mergedOptions.watch),
       fix: Boolean(mergedOptions.fix),
+      format: Boolean(mergedOptions.format),
       production: Boolean(mergedOptions.production),
       strict: Boolean(mergedOptions.strict),
       include,
@@ -423,6 +436,7 @@ interface CliOptions {
   memory: boolean;
   cache: boolean;
   fix: boolean;
+  format: boolean;
   watch: boolean;
   trace: string | undefined;
   traceExport: string | undefined;
@@ -449,6 +463,7 @@ function mergeCliWithConfig(rawOptions: Record<string, unknown>, config: Sadraza
     memory: rawOptions.memory === true ? true : config.memory ?? false,
     cache: rawOptions.cache === true ? true : config.cache ?? false,
     fix: rawOptions.fix === true,
+    format: rawOptions.format === true,
     watch: rawOptions.watch === true ? true : config.watch ?? false,
     trace: asOptionalString(rawOptions.trace) ?? config.trace,
     traceExport: asOptionalString(rawOptions.traceExport),

@@ -35,6 +35,7 @@ export interface RenderReportInput {
   watch: boolean;
   cache: boolean;
   fix: boolean;
+  format: boolean;
   production: boolean;
   strict: boolean;
   include: FindingType[];
@@ -75,6 +76,7 @@ export interface RenderReportInput {
     packagePath: string;
     removedDependencies: string[];
     removedDevDependencies: string[];
+    formattedFiles: string[];
   }>;
 }
 
@@ -90,6 +92,7 @@ export function renderReport(input: RenderReportInput): string {
           watch: input.watch,
           cache: input.cache,
           fix: input.fix,
+          format: input.format,
           production: input.production,
           strict: input.strict,
           include: input.include,
@@ -167,6 +170,9 @@ export function renderReport(input: RenderReportInput): string {
       }
       if (fix.removedDevDependencies.length > 0) {
         lines.push(`Removed devDependencies: ${fix.removedDevDependencies.join(", ")}`);
+      }
+      if (fix.formattedFiles.length > 0) {
+        lines.push(`Formatted files: ${fix.formattedFiles.join(", ")}`);
       }
     }
   }
@@ -299,6 +305,7 @@ export function renderReport(input: RenderReportInput): string {
     lines.push(pc.dim(`Watch: ${input.watch ? "enabled" : "disabled"}`));
     lines.push(pc.dim(`Cache: ${input.cache ? "enabled" : "disabled"}`));
     lines.push(pc.dim(`Fix: ${input.fix ? "enabled" : "disabled"}`));
+    lines.push(pc.dim(`Format: ${input.format ? "enabled" : "disabled"}`));
     lines.push(pc.dim(`Performance: ${input.performance ? "enabled" : "disabled"}`));
     lines.push(pc.dim(`Memory: ${input.memory ? "enabled" : "disabled"}`));
     if (input.rulesSummary) {
@@ -353,6 +360,7 @@ function describeMode(input: RenderReportInput): string {
     input.memory ? "memory" : null,
     input.watch ? "watch" : null,
     input.fix ? "fix" : null,
+    input.format ? "format" : null,
     input.debug ? "debug" : null,
   ].filter(Boolean);
 
