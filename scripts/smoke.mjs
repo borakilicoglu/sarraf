@@ -47,6 +47,22 @@ const scenarios = [
       assert.ok(report.workspaces.every((workspace) => workspace.findings.length === 0));
     },
   },
+  {
+    name: "compiler-project",
+    cwd: path.join(rootDir, "test", "fixtures", "compiler-project"),
+    args: ["--reporter", "json"],
+    validate(report) {
+      const workspace = report.workspaces[0];
+      assert.equal(workspace.summary.findings, 0);
+      assert.deepEqual(workspace.externalImports, [
+        "@mdx-js/react",
+        "astro",
+        "clsx",
+        "svelte",
+        "vue",
+      ]);
+    },
+  },
 ];
 
 for (const scenario of scenarios) {

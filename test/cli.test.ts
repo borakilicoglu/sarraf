@@ -102,4 +102,19 @@ describe("CLI", () => {
     expect(workspace.summary.scriptCommandPackages).toEqual(["markdownlint-cli", "standard"]);
     expect(workspace.externalImports).toEqual(["chalk", "commander", "markdownlint-cli", "standard"]);
   });
+
+
+  it("scans svelte, vue, mdx, and astro files for dependency imports", () => {
+    const report = runJsonReport("compiler-project");
+    const workspace = report.workspaces[0];
+
+    expect(workspace.findings).toEqual([]);
+    expect(workspace.externalImports).toEqual([
+      "@mdx-js/react",
+      "astro",
+      "clsx",
+      "svelte",
+      "vue",
+    ]);
+  });
 });
