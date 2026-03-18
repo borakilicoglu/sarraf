@@ -1,0 +1,13 @@
+{
+  "preprocessors": {
+    "packagePatterns": [
+      "left-*"
+    ],
+    "filePatterns": [
+      "src/generated*"
+    ],
+    "exportPatterns": [
+      "src/lib.ts:*"
+    ]
+  }
+}

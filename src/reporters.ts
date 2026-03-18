@@ -51,6 +51,11 @@ export interface RenderReportInput {
     allowUnusedDevDependencies: string[];
     allowMissingPackages: string[];
     allowMisplacedDevDependencies: string[];
+    preprocessors: {
+      packagePatterns: string[];
+      filePatterns: string[];
+      exportPatterns: string[];
+    };
   };
   performanceSummary?: {
     discoverWorkspacesMs: number;
@@ -292,6 +297,21 @@ export function renderReport(input: RenderReportInput): string {
       lines.push(
         pc.dim(
           `Allow misplaced devDependencies: ${input.rulesSummary.allowMisplacedDevDependencies.join(", ") || "-"}`,
+        ),
+      );
+      lines.push(
+        pc.dim(
+          `Preprocessor package patterns: ${input.rulesSummary.preprocessors.packagePatterns.join(", ") || "-"}`
+        ),
+      );
+      lines.push(
+        pc.dim(
+          `Preprocessor file patterns: ${input.rulesSummary.preprocessors.filePatterns.join(", ") || "-"}`
+        ),
+      );
+      lines.push(
+        pc.dim(
+          `Preprocessor export patterns: ${input.rulesSummary.preprocessors.exportPatterns.join(", ") || "-"}`
         ),
       );
     }

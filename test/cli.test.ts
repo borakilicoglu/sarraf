@@ -131,6 +131,16 @@ describe("CLI", () => {
 
 
 
+
+  it("preprocesses findings with package, file, and export patterns", () => {
+    const report = runJsonReport("preprocessor-project");
+    const workspace = report.workspaces[0];
+
+    expect(workspace.findings).toEqual([]);
+    expect(workspace.unusedFiles).toEqual(["src/generated.ts"]);
+    expect(workspace.unusedExports).toEqual(["src/lib.ts: ignoredHelper"]);
+  });
+
   it("follows tool-specific config arguments for vite, vitest, and jest", () => {
     const report = runJsonReport("plugin-cli-project");
     const workspace = report.workspaces[0];

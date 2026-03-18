@@ -48,6 +48,17 @@ const scenarios = [
     },
   },
   {
+    name: "preprocessor-project",
+    cwd: path.join(rootDir, "test", "fixtures", "preprocessor-project"),
+    args: ["--reporter", "json"],
+    validate(report) {
+      const workspace = report.workspaces[0];
+      assert.equal(workspace.summary.findings, 0);
+      assert.deepEqual(workspace.unusedFiles, ["src/generated.ts"]);
+      assert.deepEqual(workspace.unusedExports, ["src/lib.ts: ignoredHelper"]);
+    },
+  },
+  {
     name: "plugin-cli-project",
     cwd: path.join(rootDir, "test", "fixtures", "plugin-cli-project"),
     args: ["--reporter", "json"],

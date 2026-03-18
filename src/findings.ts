@@ -9,6 +9,11 @@ export interface FindingRules {
   allowMissingPackages: string[];
   allowMisplacedDevDependencies: string[];
   ignorePackages: string[];
+  preprocessors: {
+    packagePatterns: string[];
+    filePatterns: string[];
+    exportPatterns: string[];
+  };
 }
 
 export function getActiveFindings(
@@ -63,7 +68,12 @@ export function getActiveFindings(
     },
   ];
 
-  return candidates.filter((candidate) => {
+  const preprocessedCandidates = candidates.map((candidate) => ({
+    ...candidate,
+    items: applyPreprocessors(candidate.type, candidate.items, rules.preprocessors),
+  }));
+
+  return preprocessedCandidates.filter((candidate) => {
     if (rules.include.length > 0 && !rules.include.includes(candidate.type)) {
       return false;
     }
@@ -79,4 +89,45 @@ export function getActiveFindings(
 function filterPackages(items: string[], blocked: string[]): string[] {
   const blockedSet = new Set(blocked);
   return items.filter((item) => !blockedSet.has(item));
+}
+
+function applyPreprocessors(
+  type: FindingType,
+  items: string[],
+  preprocessors: FindingRules["preprocessors"],
+): string[] {
+  if (items.length === 0) {
+    return items;
+  }
+
+  const patterns = getPatternsForFinding(type, preprocessors);
+
+  if (patterns.length === 0) {
+    return items;
+  }
+
+  return items.filter((item) => !patterns.some((pattern) => matchesPattern(item, pattern)));
+}
+
+function getPatternsForFinding(
+  type: FindingType,
+  preprocessors: FindingRules["preprocessors"],
+): string[] {
+  if (type === "unused-files") {
+    return preprocessors.filePatterns;
+  }
+
+  if (type === "unused-exports") {
+    return preprocessors.exportPatterns;
+  }
+
+  return preprocessors.packagePatterns;
+}
+
+function matchesPattern(value: string, pattern: string): boolean {
+  const escaped = pattern
+    .replace(/[|\{}()[\]^$+?.]/g, "\\$&")
+    .replace(/\*/g, ".*");
+
+  return new RegExp(`^${escaped}$`).test(value);
 }

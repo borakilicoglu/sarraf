@@ -1,0 +1,8 @@
+{
+  "name": "preprocessor-project",
+  "version": "1.0.0",
+  "dependencies": {
+    "commander": "^14.0.3",
+    "left-pad": "^1.3.0"
+  }
+}

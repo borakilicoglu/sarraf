@@ -26,6 +26,11 @@ export interface SadrazamConfig {
     entryFiles?: string[];
     packageNames?: string[];
   };
+  preprocessors?: {
+    packagePatterns?: string[];
+    filePatterns?: string[];
+    exportPatterns?: string[];
+  };
   ai?: {
     provider?: string;
     model?: string;

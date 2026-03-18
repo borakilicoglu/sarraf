@@ -132,7 +132,7 @@ async function runScanCommand(
     const include = parseFindingTypes(mergedOptions.include);
     const exclude = parseFindingTypes(mergedOptions.exclude);
     const workspaceFilters = parseCsvOption(mergedOptions.workspace);
-    const rules = buildFindingRules(mergedOptions, include, exclude);
+    const rules = buildFindingRules(mergedOptions, include, exclude, loadedConfig.config);
 
     const discoverStart = nodePerformance.now();
     const { rootDir, workspaces } = await discoverWorkspaces(targetDir, workspaceFilters);
@@ -199,6 +199,7 @@ async function runScanCommand(
         allowUnusedDevDependencies: rules.allowUnusedDevDependencies,
         allowMissingPackages: rules.allowMissingPackages,
         allowMisplacedDevDependencies: rules.allowMisplacedDevDependencies,
+        preprocessors: rules.preprocessors,
       },
       performanceSummary: {
         discoverWorkspacesMs: roundMs(discoverWorkspacesMs),
@@ -360,6 +361,7 @@ function buildFindingRules(
   options: CliOptions,
   include: FindingType[],
   exclude: FindingType[],
+  config: SadrazamConfig,
 ): FindingRules {
   return {
     include,
@@ -369,6 +371,11 @@ function buildFindingRules(
     allowUnusedDevDependencies: parseCsvOption(options.allowUnusedDevDependencies),
     allowMissingPackages: parseCsvOption(options.allowMissingPackages),
     allowMisplacedDevDependencies: parseCsvOption(options.allowMisplacedDevDependencies),
+    preprocessors: {
+      packagePatterns: config.preprocessors?.packagePatterns ?? [],
+      filePatterns: config.preprocessors?.filePatterns ?? [],
+      exportPatterns: config.preprocessors?.exportPatterns ?? [],
+    },
   };
 }
 
