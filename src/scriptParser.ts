@@ -15,6 +15,10 @@ const BUILTIN_SCRIPT_COMMANDS = new Set([
   "bash",
 ]);
 const COMMAND_PACKAGE_ALIASES: Record<string, string> = {
+  biome: "@biomejs/biome",
+  attw: "@arethetypeswrong/cli",
+  changeset: "@changesets/cli",
+  markdownlint: "markdownlint-cli",
   tsc: "typescript",
 };
 

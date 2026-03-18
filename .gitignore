@@ -3,3 +3,6 @@ dist/
 .DS_Store
 AGENTS.md
 *.tgz
+
+docs/.vitepress/.temp/
+docs/.vitepress/dist/

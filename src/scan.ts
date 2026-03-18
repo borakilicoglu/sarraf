@@ -72,7 +72,7 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
   const externalImports = collectExternalImports(fileResults, scriptAnalysis.commandPackages);
   const packageTraces = collectPackageTraces(fileResults, scriptAnalysis.commandUsage);
   const missingPackages = externalImports.filter(
-    (name) => !isBuiltinPackage(name) && !packageMetadata.allDependencies.has(name),
+    (name) => !packageMetadata.allDependencies.has(name),
   );
   const unusedDependencies = getUnusedDeclaredPackages(
     packageMetadata.dependencies,
@@ -106,14 +106,22 @@ function collectExternalImports(files: FileScanResult[], scriptPackages: string[
 
   for (const file of files) {
     for (const specifier of file.imports) {
-      if (isExternalSpecifier(specifier)) {
-        packages.add(getPackageName(specifier));
+      if (!isExternalSpecifier(specifier)) {
+        continue;
+      }
+
+      const packageName = getPackageName(specifier);
+
+      if (!isBuiltinPackage(packageName)) {
+        packages.add(packageName);
       }
     }
   }
 
   for (const packageName of scriptPackages) {
-    packages.add(packageName);
+    if (!isBuiltinPackage(packageName)) {
+      packages.add(packageName);
+    }
   }
 
   return [...packages].sort();
@@ -132,6 +140,11 @@ function collectPackageTraces(
       }
 
       const packageName = getPackageName(specifier);
+
+      if (isBuiltinPackage(packageName)) {
+        continue;
+      }
+
       const entries = traces.get(packageName) ?? new Set<string>();
       entries.add(file.relativePath);
       traces.set(packageName, entries);
@@ -139,6 +152,10 @@ function collectPackageTraces(
   }
 
   for (const [packageName, entries] of Object.entries(scriptUsage)) {
+    if (isBuiltinPackage(packageName)) {
+      continue;
+    }
+
     const currentEntries = traces.get(packageName) ?? new Set<string>();
 
     for (const entry of entries) {
@@ -217,7 +234,7 @@ function getMisplacedDevDependencies(
 
       const packageName = getPackageName(specifier);
 
-      if (devDependencies.has(packageName)) {
+      if (!isBuiltinPackage(packageName) && devDependencies.has(packageName)) {
         misplaced.add(packageName);
       }
     }

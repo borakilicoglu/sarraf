@@ -22,8 +22,8 @@ const scenarios = [
     validate(report) {
       const workspace = report.workspaces[0];
       assert.equal(workspace.summary.findings, 0);
-      assert.ok(workspace.externalImports.includes("chalk"));
-      assert.ok(workspace.externalImports.includes("commander"));
+      assert.deepEqual(workspace.summary.scriptCommandPackages, ["markdownlint-cli", "standard"]);
+      assert.deepEqual(workspace.externalImports, ["chalk", "commander", "markdownlint-cli", "standard"]);
     },
   },
   {
@@ -34,6 +34,7 @@ const scenarios = [
       assert.equal(report.workspaces.length, 2);
       const workspaceNames = report.workspaces.map((workspace) => workspace.workspace.name).sort();
       assert.deepEqual(workspaceNames, ["@acme/shared", "@acme/web"]);
+      assert.ok(report.workspaces.every((workspace) => workspace.findings.length === 0));
     },
   },
 ];

@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import fg from "fast-glob";
 import path from "node:path";
 
@@ -26,7 +27,7 @@ export async function discoverWorkspaces(
   const rootPackagePath = await findNearestPackageJson(startDir);
   const rootDir = path.dirname(rootPackagePath);
   const rootPackage = (await readPackageJson(rootPackagePath)) as RootPackageJsonShape;
-  const workspacePatterns = normalizeWorkspacePatterns(rootPackage.workspaces);
+  const workspacePatterns = await normalizeWorkspacePatterns(rootDir, rootPackage.workspaces);
 
   const workspaces = workspacePatterns.length > 0
     ? await findDeclaredWorkspaces(rootDir, workspacePatterns)
@@ -76,18 +77,65 @@ async function findDeclaredWorkspaces(
   return workspaceTargets.sort((left, right) => left.relativeDir.localeCompare(right.relativeDir));
 }
 
-function normalizeWorkspacePatterns(
+async function normalizeWorkspacePatterns(
+  rootDir: string,
   workspaces: RootPackageJsonShape["workspaces"],
-): string[] {
-  if (Array.isArray(workspaces)) {
-    return workspaces;
-  }
+): Promise<string[]> {
+  const packageJsonPatterns = Array.isArray(workspaces)
+    ? workspaces
+    : workspaces?.packages ?? [];
+  const pnpmPatterns = await readPnpmWorkspacePatterns(rootDir);
 
-  if (workspaces?.packages) {
-    return workspaces.packages;
-  }
+  return [...new Set([...packageJsonPatterns, ...pnpmPatterns])];
+}
 
-  return [];
+async function readPnpmWorkspacePatterns(rootDir: string): Promise<string[]> {
+  const workspacePath = path.join(rootDir, "pnpm-workspace.yaml");
+
+  try {
+    const source = await readFile(workspacePath, "utf8");
+    const lines = source.split(/\r?\n/);
+    const patterns: string[] = [];
+    let inPackagesSection = false;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      if (!trimmed || trimmed.startsWith("#")) {
+        continue;
+      }
+
+      if (!inPackagesSection) {
+        if (trimmed === "packages:") {
+          inPackagesSection = true;
+        }
+        continue;
+      }
+
+      if (/^[A-Za-z0-9_-]+:\s*$/.test(trimmed) && !trimmed.startsWith("-")) {
+        break;
+      }
+
+      const match = trimmed.match(/^\-\s*(.+)$/);
+      const workspacePattern = match?.[1];
+
+      if (!workspacePattern) {
+        continue;
+      }
+
+      patterns.push(workspacePattern.trim().replace(/^['"]|['"]$/g, ""));
+    }
+
+    return patterns;
+  } catch (error) {
+    const typedError = error as NodeJS.ErrnoException;
+
+    if (typedError.code === "ENOENT") {
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 function normalizeWorkspacePattern(pattern: string): string {

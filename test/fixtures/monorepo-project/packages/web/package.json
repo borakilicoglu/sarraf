@@ -2,7 +2,12 @@
   "name": "@acme/web",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "clean": "rimraf build",
+    "test": "vitest run"
+  },
   "dependencies": {
+    "@acme/shared": "workspace:*",
     "react": "^19.0.0"
   }
 }

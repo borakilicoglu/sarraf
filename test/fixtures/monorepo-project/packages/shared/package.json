@@ -2,7 +2,11 @@
   "name": "@acme/shared",
   "version": "1.0.0",
   "type": "module",
-  "dependencies": {
-    "lodash": "^4.17.21"
+  "scripts": {
+    "clean": "rimraf build",
+    "build": "tsdown --config-loader unrun",
+    "check:exports": "attw --pack .",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
+    "test": "vitest run"
   }
 }

@@ -2,8 +2,16 @@
   "name": "cjs-project",
   "version": "1.0.0",
   "type": "commonjs",
+  "scripts": {
+    "lint": "standard",
+    "test:markdown": "markdownlint ."
+  },
   "dependencies": {
     "chalk": "^5.0.0",
     "commander": "^14.0.0"
+  },
+  "devDependencies": {
+    "markdownlint-cli": "^0.45.0",
+    "standard": "^17.1.2"
   }
 }

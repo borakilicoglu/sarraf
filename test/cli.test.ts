@@ -5,28 +5,50 @@ import { describe, expect, it } from "vitest";
 
 const rootDir = process.cwd();
 const cliPath = path.join(rootDir, "dist", "index.js");
-const fixtureDir = path.join(rootDir, "test", "fixtures", "config-project");
+
+function runJsonReport(fixtureName: string, extraArgs: string[] = []) {
+  const fixtureDir = path.join(rootDir, "test", "fixtures", fixtureName);
+  let stdout = "";
+
+  try {
+    stdout = execFileSync("node", [cliPath, fixtureDir, "--reporter", "json", ...extraArgs], {
+      cwd: rootDir,
+      encoding: "utf8",
+    });
+  } catch (error) {
+    const typedError = error as { stdout: string };
+    stdout = typedError.stdout;
+  }
+
+  return JSON.parse(stdout);
+}
 
 describe("CLI", () => {
   it("loads sadrazam.json config and applies ignore/allowlist rules", () => {
-    let stdout = "";
-
-    try {
-      stdout = execFileSync("node", [cliPath, fixtureDir], {
-        cwd: rootDir,
-        encoding: "utf8",
-      });
-    } catch (error) {
-      const typedError = error as { stdout: string };
-      stdout = typedError.stdout;
-    }
-
-    const report = JSON.parse(stdout);
+    const report = runJsonReport("config-project");
     const workspace = report.workspaces[0];
 
     expect(report.workspaces).toHaveLength(1);
     expect(workspace.summary.findings).toBe(0);
     expect(workspace.findings).toEqual([]);
     expect(workspace.summary.scriptCommandPackages).toEqual(["tsx", "typescript"]);
+  });
+
+  it("discovers pnpm workspaces and respects local workspace dependencies", () => {
+    const report = runJsonReport("monorepo-project");
+    const workspaceNames = report.workspaces.map((workspace: { workspace: { name: string } }) => workspace.workspace.name).sort();
+
+    expect(report.workspaces).toHaveLength(2);
+    expect(workspaceNames).toEqual(["@acme/shared", "@acme/web"]);
+    expect(report.workspaces.every((workspace: { findings: unknown[] }) => workspace.findings.length === 0)).toBe(true);
+  });
+
+  it("filters built-in modules and maps known script binaries to package names", () => {
+    const report = runJsonReport("cjs-project");
+    const workspace = report.workspaces[0];
+
+    expect(workspace.findings).toEqual([]);
+    expect(workspace.summary.scriptCommandPackages).toEqual(["markdownlint-cli", "standard"]);
+    expect(workspace.externalImports).toEqual(["chalk", "commander", "markdownlint-cli", "standard"]);
   });
 });

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 export interface PackageMetadata {
@@ -13,6 +13,7 @@ export interface PackageMetadata {
 }
 
 interface PackageJsonShape {
+  workspaces?: string[] | { packages?: string[] };
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
@@ -34,6 +35,21 @@ export async function readPackageMetadata(rootDir: string): Promise<PackageMetad
     ...peerDependencies,
     ...optionalDependencies,
   ]);
+
+  const workspaceRootPath = await findWorkspaceRootPackageJson(path.dirname(packagePath));
+
+  if (workspaceRootPath && workspaceRootPath !== packagePath) {
+    const workspaceRootJson = (await readPackageJson(workspaceRootPath)) as PackageJsonShape;
+
+    for (const packageName of [
+      ...Object.keys(workspaceRootJson.dependencies ?? {}),
+      ...Object.keys(workspaceRootJson.devDependencies ?? {}),
+      ...Object.keys(workspaceRootJson.peerDependencies ?? {}),
+      ...Object.keys(workspaceRootJson.optionalDependencies ?? {}),
+    ]) {
+      allDependencies.add(packageName);
+    }
+  }
 
   return {
     packagePath,
@@ -75,5 +91,48 @@ export async function findNearestPackageJson(startDir: string): Promise<string> 
     }
 
     currentDir = parentDir;
+  }
+}
+
+async function findWorkspaceRootPackageJson(startDir: string): Promise<string | null> {
+  let currentDir = path.resolve(startDir);
+
+  while (true) {
+    const packagePath = path.join(currentDir, "package.json");
+
+    try {
+      const packageJson = (await readPackageJson(packagePath)) as PackageJsonShape;
+
+      if (hasWorkspaceConfig(packageJson) || await hasPnpmWorkspaceFile(currentDir)) {
+        return packagePath;
+      }
+    } catch (error) {
+      const typedError = error as NodeJS.ErrnoException;
+
+      if (typedError.code !== "ENOENT") {
+        throw error;
+      }
+    }
+
+    const parentDir = path.dirname(currentDir);
+
+    if (parentDir === currentDir) {
+      return null;
+    }
+
+    currentDir = parentDir;
+  }
+}
+
+function hasWorkspaceConfig(packageJson: PackageJsonShape): boolean {
+  return Array.isArray(packageJson.workspaces) || Array.isArray(packageJson.workspaces?.packages);
+}
+
+async function hasPnpmWorkspaceFile(dir: string): Promise<boolean> {
+  try {
+    await access(path.join(dir, "pnpm-workspace.yaml"));
+    return true;
+  } catch {
+    return false;
   }
 }
