@@ -10,6 +10,7 @@ export interface PackageMetadata {
   optionalDependencies: Set<string>;
   allDependencies: Set<string>;
   scripts: Record<string, string>;
+  entrySpecifiers: string[];
 }
 
 interface PackageJsonShape {
@@ -19,6 +20,13 @@ interface PackageJsonShape {
   peerDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
+  main?: string;
+  module?: string;
+  types?: string;
+  typings?: string;
+  browser?: string | Record<string, string | false>;
+  bin?: string | Record<string, string>;
+  exports?: unknown;
 }
 
 export async function readPackageMetadata(rootDir: string): Promise<PackageMetadata> {
@@ -60,6 +68,7 @@ export async function readPackageMetadata(rootDir: string): Promise<PackageMetad
     optionalDependencies,
     allDependencies,
     scripts: packageJson.scripts ?? {},
+    entrySpecifiers: collectEntrySpecifiers(packageJson),
   };
 }
 
@@ -135,4 +144,88 @@ async function hasPnpmWorkspaceFile(dir: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function collectEntrySpecifiers(packageJson: PackageJsonShape): string[] {
+  const values = new Set<string>();
+
+  addEntryValue(values, packageJson.main);
+  addEntryValue(values, packageJson.module);
+  addEntryValue(values, packageJson.types);
+  addEntryValue(values, packageJson.typings);
+  collectBrowserEntries(values, packageJson.browser);
+  collectBinEntries(values, packageJson.bin);
+  collectExportEntries(values, packageJson.exports);
+
+  return [...values].sort();
+}
+
+function collectBrowserEntries(values: Set<string>, browser: PackageJsonShape["browser"]): void {
+  if (!browser) {
+    return;
+  }
+
+  if (typeof browser === "string") {
+    addEntryValue(values, browser);
+    return;
+  }
+
+  for (const entry of Object.values(browser)) {
+    if (typeof entry === "string") {
+      addEntryValue(values, entry);
+    }
+  }
+}
+
+function collectBinEntries(values: Set<string>, bin: PackageJsonShape["bin"]): void {
+  if (!bin) {
+    return;
+  }
+
+  if (typeof bin === "string") {
+    addEntryValue(values, bin);
+    return;
+  }
+
+  for (const entry of Object.values(bin)) {
+    addEntryValue(values, entry);
+  }
+}
+
+function collectExportEntries(values: Set<string>, exportsField: unknown): void {
+  if (!exportsField) {
+    return;
+  }
+
+  if (typeof exportsField === "string") {
+    addEntryValue(values, exportsField);
+    return;
+  }
+
+  if (Array.isArray(exportsField)) {
+    for (const entry of exportsField) {
+      collectExportEntries(values, entry);
+    }
+    return;
+  }
+
+  if (typeof exportsField === "object") {
+    for (const entry of Object.values(exportsField as Record<string, unknown>)) {
+      collectExportEntries(values, entry);
+    }
+  }
+}
+
+function addEntryValue(values: Set<string>, value: string | undefined): void {
+  if (!value) {
+    return;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed || trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return;
+  }
+
+  values.add(trimmed);
 }

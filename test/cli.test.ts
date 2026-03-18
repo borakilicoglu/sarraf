@@ -117,4 +117,19 @@ describe("CLI", () => {
       "vue",
     ]);
   });
+
+
+  it("reports unreachable source files as unused files", () => {
+    const report = runJsonReport("unused-files-project");
+    const workspace = report.workspaces[0];
+
+    expect(workspace.findings).toEqual([
+      {
+        type: "unused-files",
+        title: "Unused files",
+        items: ["src/unused.ts"],
+      },
+    ]);
+    expect(report.workspaces[0].unusedFiles).toEqual(["src/unused.ts"]);
+  });
 });

@@ -10,7 +10,8 @@ export type FindingType =
   | "missing"
   | "unused-dependencies"
   | "unused-devDependencies"
-  | "misplaced-devDependencies";
+  | "misplaced-devDependencies"
+  | "unused-files";
 
 export interface ActiveFinding {
   type: FindingType;
@@ -92,6 +93,7 @@ export function renderReport(input: RenderReportInput): string {
           },
           findings,
           externalImports: result.externalImports,
+          unusedFiles: result.unusedFiles,
           performance: input.performance ? result.performance : null,
           traces: input.trace
             ? {
@@ -267,6 +269,10 @@ function colorizeFindingTitle(type: FindingType, title: string): string {
 
   if (type === "misplaced-devDependencies") {
     return pc.red(title);
+  }
+
+  if (type === "unused-files") {
+    return pc.yellow(title);
   }
 
   return pc.yellow(title);

@@ -51,6 +51,11 @@ export function getActiveFindings(
         ...rules.ignorePackages,
       ]),
     },
+    {
+      type: "unused-files",
+      title: "Unused files",
+      items: result.unusedFiles,
+    },
   ];
 
   return candidates.filter((candidate) => {

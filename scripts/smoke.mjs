@@ -63,6 +63,16 @@ const scenarios = [
       ]);
     },
   },
+  {
+    name: "unused-files-project",
+    cwd: path.join(rootDir, "test", "fixtures", "unused-files-project"),
+    args: ["--reporter", "json"],
+    validate(report) {
+      const workspace = report.workspaces[0];
+      assert.equal(workspace.summary.findings, 1);
+      assert.deepEqual(workspace.unusedFiles, ["src/unused.ts"]);
+    },
+  },
 ];
 
 for (const scenario of scenarios) {

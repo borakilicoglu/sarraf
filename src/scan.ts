@@ -10,6 +10,21 @@ import { readPackageMetadata } from "./packageReader.js";
 import { parsePackageScripts } from "./scriptParser.js";
 import { mapToSourcePath } from "./sourceMapper.js";
 
+const RESOLVABLE_EXTENSIONS = [
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".svelte",
+  ".vue",
+  ".mdx",
+  ".astro",
+];
+
 export interface FileScanResult {
   filePath: string;
   relativePath: string;
@@ -38,6 +53,7 @@ export interface ScanResult {
   unusedDependencies: string[];
   unusedDevDependencies: string[];
   misplacedDevDependencies: string[];
+  unusedFiles: string[];
   performance: ScanPerformance;
   cached: boolean;
 }
@@ -142,6 +158,12 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
     ? getMisplacedDevDependencies(fileResults, packageMetadata.devDependencies)
     : [];
   const scriptEntryFiles = await mapScriptEntryFiles(absoluteRoot, scriptAnalysis.fileEntries);
+  const unusedFiles = getUnusedFiles(
+    absoluteRoot,
+    fileResults,
+    packageMetadata.entrySpecifiers,
+    scriptAnalysis.fileEntries,
+  );
   const analysisMs = nodePerformance.now() - analysisStart;
 
   const resultWithoutRuntime = {
@@ -156,6 +178,7 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
     unusedDependencies,
     unusedDevDependencies,
     misplacedDevDependencies,
+    unusedFiles,
   };
 
   if (options.cache) {
@@ -253,8 +276,152 @@ function collectPackageTraces(
   );
 }
 
+function getUnusedFiles(
+  rootDir: string,
+  files: FileScanResult[],
+  packageEntries: string[],
+  scriptEntryFiles: string[],
+): string[] {
+  const filePathSet = new Set(files.map((file) => file.filePath));
+  const entryFiles = resolveEntryFiles(rootDir, files, packageEntries, scriptEntryFiles, filePathSet);
+
+  if (entryFiles.length === 0) {
+    return [];
+  }
+
+  const graph = buildLocalImportGraph(files, filePathSet);
+  const visited = new Set<string>();
+  const stack = [...entryFiles];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+
+    if (!current || visited.has(current)) {
+      continue;
+    }
+
+    visited.add(current);
+
+    for (const next of graph.get(current) ?? []) {
+      if (!visited.has(next)) {
+        stack.push(next);
+      }
+    }
+  }
+
+  return files
+    .filter((file) => !visited.has(file.filePath))
+    .map((file) => file.relativePath)
+    .sort();
+}
+
+function buildLocalImportGraph(
+  files: FileScanResult[],
+  filePathSet: Set<string>,
+): Map<string, string[]> {
+  const graph = new Map<string, string[]>();
+
+  for (const file of files) {
+    const localImports = new Set<string>();
+
+    for (const specifier of file.imports) {
+      if (!isLocalSpecifier(specifier)) {
+        continue;
+      }
+
+      const resolved = resolveLocalImport(file.filePath, specifier, filePathSet);
+
+      if (resolved) {
+        localImports.add(resolved);
+      }
+    }
+
+    graph.set(file.filePath, [...localImports].sort());
+  }
+
+  return graph;
+}
+
+function resolveEntryFiles(
+  rootDir: string,
+  files: FileScanResult[],
+  packageEntries: string[],
+  scriptEntryFiles: string[],
+  filePathSet: Set<string>,
+): string[] {
+  const entries = new Set<string>();
+  const packageDir = path.dirname(path.join(rootDir, "package.json"));
+
+  for (const entry of packageEntries) {
+    const resolved = resolvePackageEntry(packageDir, entry, filePathSet);
+
+    if (resolved) {
+      entries.add(resolved);
+    }
+  }
+
+  for (const entry of scriptEntryFiles) {
+    const absolute = path.resolve(rootDir, entry);
+
+    if (filePathSet.has(absolute)) {
+      entries.add(absolute);
+    }
+  }
+
+  for (const file of files) {
+    if (file.relativePath.startsWith("src/index.") || file.relativePath === "index.ts" || file.relativePath === "index.js") {
+      entries.add(file.filePath);
+    }
+  }
+
+  return [...entries].sort();
+}
+
+function resolvePackageEntry(
+  packageDir: string,
+  specifier: string,
+  filePathSet: Set<string>,
+): string | null {
+  if (!specifier.startsWith(".") && !path.isAbsolute(specifier)) {
+    return null;
+  }
+
+  const target = path.resolve(packageDir, specifier);
+  return resolveFileCandidate(target, filePathSet);
+}
+
+function resolveLocalImport(
+  fromFilePath: string,
+  specifier: string,
+  filePathSet: Set<string>,
+): string | null {
+  const target = path.resolve(path.dirname(fromFilePath), specifier);
+  return resolveFileCandidate(target, filePathSet);
+}
+
+function resolveFileCandidate(target: string, filePathSet: Set<string>): string | null {
+  const candidates = new Set<string>([target]);
+
+  for (const extension of RESOLVABLE_EXTENSIONS) {
+    candidates.add(`${target}${extension}`);
+    candidates.add(path.join(target, `index${extension}`));
+  }
+
+  for (const candidate of candidates) {
+    if (filePathSet.has(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 function isExternalSpecifier(specifier: string): boolean {
   return !specifier.startsWith(".") && !path.isAbsolute(specifier);
+}
+
+function isLocalSpecifier(specifier: string): boolean {
+  return specifier.startsWith(".") || path.isAbsolute(specifier);
 }
 
 function getPackageName(specifier: string): string {
