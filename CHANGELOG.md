@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.1.0-beta.2
+
+### Added
+- Configuration hints for stale allowlist entries in Sadrazam config
+- Performance reporting with per-workspace and total timing output
+
+### Changed
+- Added `--performance` CLI flag and JSON reporter performance output
+
 ## v0.1.0-beta.1
 
 ### Changed
