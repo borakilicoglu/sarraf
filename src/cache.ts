@@ -7,7 +7,7 @@ import type { ScanOptions, ScanResult } from "./scan.js";
 const CACHE_FILE = ".sadrazam-cache.json";
 const CACHE_VERSION = 1;
 
-type CachedScanResult = Omit<ScanResult, "performance" | "cached">;
+type CachedScanResult = Omit<ScanResult, "performance" | "memory" | "cached">;
 
 interface CacheEntry {
   fingerprint: string;

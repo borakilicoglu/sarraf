@@ -44,6 +44,14 @@ export interface ScanPerformance {
   totalMs: number;
 }
 
+export interface ScanMemory {
+  rssMb: number;
+  heapUsedMb: number;
+  heapTotalMb: number;
+  externalMb: number;
+  arrayBuffersMb: number;
+}
+
 export interface ScanResult {
   rootDir: string;
   packagePath: string;
@@ -52,6 +60,7 @@ export interface ScanResult {
   scriptCommandPackages: string[];
   scriptEntryFiles: string[];
   packageTraces: Record<string, string[]>;
+  exportTraces: Record<string, string[]>;
   missingPackages: string[];
   unusedDependencies: string[];
   unusedDevDependencies: string[];
@@ -59,6 +68,7 @@ export interface ScanResult {
   unusedFiles: string[];
   unusedExports: string[];
   performance: ScanPerformance;
+  memory: ScanMemory;
   cached: boolean;
 }
 
@@ -110,6 +120,7 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
       return {
         ...cachedResult,
         cached: true,
+        memory: getProcessMemoryUsage(),
         performance: {
           discoverInputsMs: roundMs(discoverInputsMs),
           scriptParseMs: roundMs(scriptParseMs),
@@ -146,6 +157,12 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
   const analysisStart = nodePerformance.now();
   const externalImports = collectExternalImports(fileResults, scriptAnalysis.commandPackages);
   const packageTraces = collectPackageTraces(fileResults, scriptAnalysis.commandUsage);
+  const exportTraces = collectExportTraces(
+    absoluteRoot,
+    fileResults,
+    packageMetadata.entrySpecifiers,
+    scriptAnalysis.fileEntries,
+  );
   const missingPackages = externalImports.filter(
     (name) => !packageMetadata.allDependencies.has(name),
   );
@@ -188,6 +205,7 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
     scriptCommandPackages: scriptAnalysis.commandPackages,
     scriptEntryFiles,
     packageTraces,
+    exportTraces,
     missingPackages,
     unusedDependencies,
     unusedDevDependencies,
@@ -217,6 +235,7 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
       analysisMs: roundMs(analysisMs),
       totalMs: roundMs(nodePerformance.now() - totalStart),
     },
+    memory: getProcessMemoryUsage(),
   };
 }
 
@@ -244,6 +263,72 @@ function collectExternalImports(files: FileScanResult[], scriptPackages: string[
   }
 
   return [...packages].sort();
+}
+
+function collectExportTraces(
+  rootDir: string,
+  files: FileScanResult[],
+  packageEntries: string[],
+  scriptEntryFiles: string[],
+): Record<string, string[]> {
+  const filePathSet = new Set(files.map((file) => file.filePath));
+  const { reachableFiles } = getReachableFilePaths(rootDir, files, packageEntries, scriptEntryFiles);
+  const relativePaths = new Map(files.map((file) => [file.filePath, file.relativePath] as const));
+  const traces = new Map<string, Set<string>>();
+
+  for (const file of files) {
+    if (!reachableFiles.has(file.filePath)) {
+      continue;
+    }
+
+    for (const reference of file.localReferences) {
+      if (!isLocalSpecifier(reference.specifier)) {
+        continue;
+      }
+
+      const target = resolveLocalImport(file.filePath, reference.specifier, filePathSet);
+
+      if (!target || !reachableFiles.has(target)) {
+        continue;
+      }
+
+      const targetRelativePath = relativePaths.get(target);
+
+      if (!targetRelativePath) {
+        continue;
+      }
+
+      if (reference.usesAllExports) {
+        const targetFile = files.find((candidate) => candidate.filePath === target);
+
+        for (const exportName of targetFile?.exportedNames ?? []) {
+          addExportTrace(traces, `${targetRelativePath}:${exportName}`, file.relativePath);
+        }
+
+        continue;
+      }
+
+      for (const exportName of reference.importedNames) {
+        addExportTrace(traces, `${targetRelativePath}:${exportName}`, file.relativePath);
+      }
+    }
+  }
+
+  return Object.fromEntries(
+    [...traces.entries()]
+      .map(([traceTarget, entries]) => [traceTarget, [...entries].sort()] as const)
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
+}
+
+function addExportTrace(
+  traces: Map<string, Set<string>>,
+  traceTarget: string,
+  importer: string,
+): void {
+  const entries = traces.get(traceTarget) ?? new Set<string>();
+  entries.add(importer);
+  traces.set(traceTarget, entries);
 }
 
 function collectPackageTraces(
@@ -667,6 +752,22 @@ function isProductionFilePath(rootDir: string, filePath: string): boolean {
     /\.spec\.[^.]+$/i.test(normalizedPath) ||
     /\.stories\.[^.]+$/i.test(normalizedPath)
   );
+}
+
+function getProcessMemoryUsage(): ScanMemory {
+  const usage = process.memoryUsage();
+
+  return {
+    rssMb: roundMb(usage.rss),
+    heapUsedMb: roundMb(usage.heapUsed),
+    heapTotalMb: roundMb(usage.heapTotal),
+    externalMb: roundMb(usage.external),
+    arrayBuffersMb: roundMb(usage.arrayBuffers),
+  };
+}
+
+function roundMb(value: number): number {
+  return Number((value / (1024 * 1024)).toFixed(1));
 }
 
 function roundMs(value: number): number {

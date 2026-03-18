@@ -13,7 +13,9 @@ export interface SadrazamConfig {
   strict?: boolean;
   debug?: boolean;
   performance?: boolean;
+  memory?: boolean;
   cache?: boolean;
+  watch?: boolean;
   trace?: string;
   ignorePackages?: string[];
   allowUnusedDependencies?: string[];

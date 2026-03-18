@@ -1,5 +1,5 @@
-import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
+import { appendFileSync, cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -27,6 +27,20 @@ function runJsonReportForDir(targetDir: string, extraArgs: string[] = []) {
   }
 
   return JSON.parse(stdout);
+}
+
+async function waitForOutput(predicate: () => boolean, timeoutMs = 4000) {
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+
+  throw new Error("Timed out waiting for watch output");
 }
 
 describe("CLI", () => {
@@ -57,6 +71,16 @@ describe("CLI", () => {
     expect(report.performance.workspaceScanMs).toBeGreaterThanOrEqual(0);
     expect(workspace.performance.totalMs).toBeGreaterThanOrEqual(0);
     expect(workspace.performance.readFilesMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("includes memory usage when memory mode is enabled", () => {
+    const report = runJsonReport("config-project", ["--memory"]);
+    const workspace = report.workspaces[0];
+
+    expect(report.mode.memory).toBe(true);
+    expect(report.memory.peak.heapUsedMb).toBeGreaterThanOrEqual(0);
+    expect(workspace.memory.heapUsedMb).toBeGreaterThanOrEqual(0);
+    expect(workspace.memory.rssMb).toBeGreaterThanOrEqual(0);
   });
 
   it("reuses cached scan results when inputs are unchanged", () => {
@@ -145,5 +169,46 @@ describe("CLI", () => {
       },
     ]);
     expect(report.workspaces[0].unusedExports).toEqual(["src/lib.ts: unusedHelper"]);
+  });
+
+  it("traces export usage for reachable local modules", () => {
+    const report = runJsonReport("unused-exports-project", ["--trace-export", "src/lib.ts:usedHelper"]);
+
+    expect(report.workspaces[0].exportTrace).toEqual({
+      export: "src/lib.ts:usedHelper",
+      sources: ["src/index.ts"],
+    });
+  });
+
+  it("reruns in watch mode when project files change", async () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "sadrazam-watch-"));
+    const tempProject = path.join(tempRoot, "project");
+
+    cpSync(path.join(rootDir, "test", "fixtures", "config-project"), tempProject, { recursive: true });
+
+    const child = spawn("node", [cliPath, tempProject, "--watch"], {
+      cwd: rootDir,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let output = "";
+    child.stdout.on("data", (chunk) => {
+      output += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      output += chunk.toString();
+    });
+
+    try {
+      await waitForOutput(() => output.includes("Watching for changes. Press Ctrl+C to exit."));
+
+      appendFileSync(path.join(tempProject, "src", "index.ts"), "\n");
+
+      await waitForOutput(() => output.includes("Re-running..."));
+    } finally {
+      child.kill("SIGINT");
+      await new Promise((resolve) => child.once("exit", resolve));
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 });

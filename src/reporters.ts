@@ -1,6 +1,6 @@
 import pc from "picocolors";
 
-import type { ScanResult } from "./scan.js";
+import type { ScanMemory, ScanResult } from "./scan.js";
 import type { WorkspaceTarget } from "./workspaceFinder.js";
 
 export const SUPPORTED_REPORTERS = ["text", "json"] as const;
@@ -31,6 +31,8 @@ export interface RenderReportInput {
   reporter: ReporterType;
   debug: boolean;
   performance: boolean;
+  memory: boolean;
+  watch: boolean;
   cache: boolean;
   production: boolean;
   strict: boolean;
@@ -38,6 +40,7 @@ export interface RenderReportInput {
   exclude: FindingType[];
   workspaces: ReportWorkspace[];
   trace?: string;
+  traceExport?: string;
   aiSummary?: string;
   warnings?: string[];
   configurationHints?: string[];
@@ -55,6 +58,9 @@ export interface RenderReportInput {
     aiSummaryMs: number;
     totalMs: number;
   };
+  memorySummary?: {
+    peak: ScanMemory;
+  };
   ai?: {
     provider: string;
     model?: string;
@@ -69,6 +75,8 @@ export function renderReport(input: RenderReportInput): string {
         mode: {
           debug: input.debug,
           performance: input.performance,
+          memory: input.memory,
+          watch: input.watch,
           cache: input.cache,
           production: input.production,
           strict: input.strict,
@@ -82,6 +90,7 @@ export function renderReport(input: RenderReportInput): string {
         configSource: input.configSource ?? null,
         rulesSummary: input.rulesSummary ?? null,
         performance: input.performance ? input.performanceSummary ?? null : null,
+        memory: input.memory ? input.memorySummary ?? null : null,
         workspaces: input.workspaces.map(({ workspace, result, findings }) => ({
           workspace,
           summary: {
@@ -97,10 +106,17 @@ export function renderReport(input: RenderReportInput): string {
           unusedFiles: result.unusedFiles,
           unusedExports: result.unusedExports,
           performance: input.performance ? result.performance : null,
+          memory: input.memory ? result.memory : null,
           traces: input.trace
             ? {
                 package: input.trace,
                 sources: result.packageTraces[input.trace] ?? [],
+              }
+            : null,
+          exportTrace: input.traceExport
+            ? {
+                export: input.traceExport,
+                sources: result.exportTraces[input.traceExport] ?? [],
               }
             : null,
         })),
@@ -146,6 +162,13 @@ export function renderReport(input: RenderReportInput): string {
     lines.push(`Total: ${formatMs(input.performanceSummary.totalMs)}`);
   }
 
+  if (input.memory && input.memorySummary) {
+    lines.push("");
+    lines.push(pc.blue("Memory"));
+    lines.push(`Peak heap used: ${formatMb(input.memorySummary.peak.heapUsedMb)}`);
+    lines.push(`Peak RSS: ${formatMb(input.memorySummary.peak.rssMb)}`);
+  }
+
   if (input.ai) {
     lines.push("");
     lines.push(pc.magenta("AI mode"));
@@ -178,6 +201,9 @@ export function renderReport(input: RenderReportInput): string {
     }
     if (input.performance) {
       lines.push(`Scan time: ${formatMs(result.performance.totalMs)}`);
+    }
+    if (input.memory) {
+      lines.push(`Heap used: ${formatMb(result.memory.heapUsedMb)}`);
     }
 
     if (findingCount === 0) {
@@ -212,6 +238,21 @@ export function renderReport(input: RenderReportInput): string {
         }
       }
     }
+
+    if (input.traceExport) {
+      lines.push("");
+      lines.push(pc.bold(`Export trace: ${input.traceExport}`));
+
+      const traceEntries = result.exportTraces[input.traceExport] ?? [];
+
+      if (traceEntries.length === 0) {
+        lines.push(pc.dim("No export trace entries found."));
+      } else {
+        for (const entry of traceEntries) {
+          lines.push(`- ${entry}`);
+        }
+      }
+    }
   }
 
   if (input.debug) {
@@ -222,8 +263,11 @@ export function renderReport(input: RenderReportInput): string {
     lines.push(pc.dim(`Include: ${input.include.join(", ") || "-"}`));
     lines.push(pc.dim(`Exclude: ${input.exclude.join(", ") || "-"}`));
     lines.push(pc.dim(`Trace: ${input.trace ?? "-"}`));
+    lines.push(pc.dim(`Trace export: ${input.traceExport ?? "-"}`));
+    lines.push(pc.dim(`Watch: ${input.watch ? "enabled" : "disabled"}`));
     lines.push(pc.dim(`Cache: ${input.cache ? "enabled" : "disabled"}`));
     lines.push(pc.dim(`Performance: ${input.performance ? "enabled" : "disabled"}`));
+    lines.push(pc.dim(`Memory: ${input.memory ? "enabled" : "disabled"}`));
     if (input.rulesSummary) {
       lines.push(pc.dim(`Ignore packages: ${input.rulesSummary.ignorePackages.join(", ") || "-"}`));
       lines.push(
@@ -258,6 +302,8 @@ function describeMode(input: RenderReportInput): string {
     input.strict ? "strict" : null,
     input.cache ? "cache" : null,
     input.performance ? "performance" : null,
+    input.memory ? "memory" : null,
+    input.watch ? "watch" : null,
     input.debug ? "debug" : null,
   ].filter(Boolean);
 
@@ -282,4 +328,8 @@ function colorizeFindingTitle(type: FindingType, title: string): string {
 
 function formatMs(value: number): string {
   return `${value.toFixed(1)}ms`;
+}
+
+function formatMb(value: number): string {
+  return `${value.toFixed(1)} MB`;
 }
