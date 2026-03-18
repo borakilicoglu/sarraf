@@ -26,6 +26,10 @@ export interface SadrazamConfig {
     entryFiles?: string[];
     packageNames?: string[];
   };
+  catalog?: {
+    packages?: Record<string, string[]>;
+    entryFiles?: Record<string, string[]>;
+  };
   preprocessors?: {
     packagePatterns?: string[];
     filePatterns?: string[];

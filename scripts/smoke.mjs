@@ -16,6 +16,20 @@ const scenarios = [
     },
   },
   {
+    name: "catalog-project",
+    cwd: path.join(rootDir, "test", "fixtures", "catalog-project"),
+    args: ["--reporter", "json"],
+    validate(report) {
+      const workspace = report.workspaces[0];
+      assert.equal(workspace.summary.findings, 0);
+      assert.deepEqual(workspace.externalImports, ["commander", "react-dom"]);
+      assert.deepEqual(report.configurationHints, [
+        "catalog.entryFiles.unused-entry is unused and can be removed.",
+        "catalog.packages.unused-packages is unused and can be removed.",
+      ]);
+    },
+  },
+  {
     name: "ts-node-types-project",
     cwd: path.join(rootDir, "test", "fixtures", "ts-node-types-project"),
     args: ["--reporter", "json"],

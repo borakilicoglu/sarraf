@@ -1,3 +1,4 @@
+import { getUnusedCatalogHints, resolveCatalogPackageNames } from "./catalog.js";
 import type { SadrazamConfig } from "./config.js";
 import type { ScanResult } from "./scan.js";
 
@@ -45,7 +46,7 @@ export function getConfigurationHints(
   hints.push(
     ...getUnusedRuleHints(
       "ignorePackages",
-      config.ignorePackages,
+      resolveCatalogPackageNames(config.ignorePackages, config),
       observedPackages,
       'ignorePackages entry "{name}" has no effect and can be removed.',
     ),
@@ -53,7 +54,7 @@ export function getConfigurationHints(
   hints.push(
     ...getUnusedRuleHints(
       "allowUnusedDependencies",
-      config.allowUnusedDependencies,
+      resolveCatalogPackageNames(config.allowUnusedDependencies, config),
       unusedDependencies,
       'allowUnusedDependencies entry "{name}" has no effect and can be removed.',
     ),
@@ -61,7 +62,7 @@ export function getConfigurationHints(
   hints.push(
     ...getUnusedRuleHints(
       "allowUnusedDevDependencies",
-      config.allowUnusedDevDependencies,
+      resolveCatalogPackageNames(config.allowUnusedDevDependencies, config),
       unusedDevDependencies,
       'allowUnusedDevDependencies entry "{name}" has no effect and can be removed.',
     ),
@@ -69,7 +70,7 @@ export function getConfigurationHints(
   hints.push(
     ...getUnusedRuleHints(
       "allowMissingPackages",
-      config.allowMissingPackages,
+      resolveCatalogPackageNames(config.allowMissingPackages, config),
       missingPackages,
       'allowMissingPackages entry "{name}" has no effect and can be removed.',
     ),
@@ -77,11 +78,13 @@ export function getConfigurationHints(
   hints.push(
     ...getUnusedRuleHints(
       "allowMisplacedDevDependencies",
-      config.allowMisplacedDevDependencies,
+      resolveCatalogPackageNames(config.allowMisplacedDevDependencies, config),
       misplacedDevDependencies,
       'allowMisplacedDevDependencies entry "{name}" has no effect and can be removed.',
     ),
   );
+
+  hints.push(...getUnusedCatalogHints(config));
 
   return hints.sort();
 }

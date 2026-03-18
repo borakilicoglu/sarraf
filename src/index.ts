@@ -10,6 +10,7 @@ import fg from "fast-glob";
 import pc from "picocolors";
 
 import { generateAiSummary } from "./aiClient.js";
+import { resolveCatalogEntryFiles, resolveCatalogInputs, resolveCatalogPackageNames } from "./catalog.js";
 import { applyAutoFixes } from "./autoFix.js";
 import { resolveAiConfig, SUPPORTED_AI_PROVIDERS } from "./aiConfig.js";
 import { getConfigurationHints } from "./configHints.js";
@@ -311,7 +312,7 @@ async function collectWorkspaceReports(
         production: Boolean(options.production),
         strict: Boolean(options.strict),
         cache: Boolean(options.cache || options.watch),
-        ...(config.inputs ? { pluginInputs: config.inputs } : {}),
+        ...(config.inputs ? { pluginInputs: resolveCatalogInputs(config) } : {}),
         ...(config.jsdocTags?.ignoreExports
           ? { jsdocIgnoreExportTags: config.jsdocTags.ignoreExports }
           : {}),
@@ -394,11 +395,11 @@ function buildFindingRules(
   return {
     include,
     exclude,
-    ignorePackages: parseCsvOption(options.ignorePackages),
-    allowUnusedDependencies: parseCsvOption(options.allowUnusedDependencies),
-    allowUnusedDevDependencies: parseCsvOption(options.allowUnusedDevDependencies),
-    allowMissingPackages: parseCsvOption(options.allowMissingPackages),
-    allowMisplacedDevDependencies: parseCsvOption(options.allowMisplacedDevDependencies),
+    ignorePackages: resolveCatalogPackageNames(parseCsvOption(options.ignorePackages), config),
+    allowUnusedDependencies: resolveCatalogPackageNames(parseCsvOption(options.allowUnusedDependencies), config),
+    allowUnusedDevDependencies: resolveCatalogPackageNames(parseCsvOption(options.allowUnusedDevDependencies), config),
+    allowMissingPackages: resolveCatalogPackageNames(parseCsvOption(options.allowMissingPackages), config),
+    allowMisplacedDevDependencies: resolveCatalogPackageNames(parseCsvOption(options.allowMisplacedDevDependencies), config),
     preprocessors: {
       packagePatterns: config.preprocessors?.packagePatterns ?? [],
       filePatterns: config.preprocessors?.filePatterns ?? [],

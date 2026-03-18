@@ -1,0 +1,28 @@
+{
+  "catalog": {
+    "packages": {
+      "optional": [
+        "react-dom"
+      ],
+      "unused-packages": [
+        "left-pad"
+      ]
+    },
+    "entryFiles": {
+      "bootstrap": [
+        "scripts/bootstrap.ts"
+      ],
+      "unused-entry": [
+        "scripts/unused.ts"
+      ]
+    }
+  },
+  "ignorePackages": [
+    "$packages:optional"
+  ],
+  "inputs": {
+    "entryFiles": [
+      "$entryFiles:bootstrap"
+    ]
+  }
+}

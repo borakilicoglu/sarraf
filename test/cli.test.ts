@@ -62,6 +62,19 @@ describe("CLI", () => {
     ]);
   });
 
+
+  it("resolves catalog references and reports unused catalog entries", () => {
+    const report = runJsonReport("catalog-project");
+    const workspace = report.workspaces[0];
+
+    expect(workspace.findings).toEqual([]);
+    expect(workspace.externalImports).toEqual(["commander", "react-dom"]);
+    expect(report.configurationHints).toEqual([
+      "catalog.entryFiles.unused-entry is unused and can be removed.",
+      "catalog.packages.unused-packages is unused and can be removed.",
+    ]);
+  });
+
   it("includes performance timings when performance mode is enabled", () => {
     const report = runJsonReport("config-project", ["--performance"]);
     const workspace = report.workspaces[0];

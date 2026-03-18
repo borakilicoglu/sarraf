@@ -1,0 +1,8 @@
+{
+  "name": "catalog-project",
+  "private": true,
+  "main": "./src/index.ts",
+  "dependencies": {
+    "commander": "^14.0.0"
+  }
+}
