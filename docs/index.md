@@ -49,9 +49,10 @@ AI_PROVIDER=openai AI_TOKEN=your_token npx sadrazam . --ai
 - unused reachable exports
 - workspace and monorepo-aware scanning
 - package usage tracing with `--trace`
-- config-based allowlists and ignore rules
-- cache and performance modes
+- config-based allowlists, catalogs, and preprocessors
+- cache, performance, memory, and watch modes
 - production-only and strict scan modes
+- safe `--fix` and `--fix --format` cleanup
 - optional AI summaries on top of scan findings
 
 ## Why It Exists

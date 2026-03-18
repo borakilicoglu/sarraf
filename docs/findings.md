@@ -38,3 +38,5 @@ sadrazam . --reporter json
 
 - `unused-files` intentionally ignores common test and config file patterns to reduce false positives.
 - `unused-exports` is conservative in ambiguous cases and currently targets local module relationships.
+- `unused-exports` can ignore explicitly tagged exports via `jsdocTags.ignoreExports` and tags such as `@sadrazam-ignore`.
+- `preprocessors` can suppress package, file, or export findings after analysis when you need deterministic exceptions.

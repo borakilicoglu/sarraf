@@ -21,15 +21,19 @@ Current status:
 - missing package declarations
 - unused source file detection
 - unused export detection for reachable local modules
+- package and export trace output
 - script-aware dependency detection
 - workspace and monorepo-aware scanning
+- CommonJS and hybrid import support
 - text and JSON reporters
-- package usage tracing
 - source mapping from build output back to source files
-- cache and performance scan modes
+- cache, performance, memory, and watch modes
 - production and strict scan modes
 - config file support via `sadrazam.json` or `package.json#sadrazam`
-- ignore and allowlist controls for findings
+- ignore, allowlist, catalog, and preprocessor controls
+- plugin-aware script analysis and config inputs
+- safe `--fix` and `--fix --format` support for `package.json`
+- JSDoc export ignore tags
 - AI summaries via `openai`, `anthropic`, or `gemini`
 
 ## Why Sadrazam?
@@ -88,13 +92,15 @@ Included in v1:
 - unused export detection
 - script parser support
 - workspace-aware scanning
-- trace output for package usage
+- trace output for package and export usage
 - source mapping for build output
 - reporter support for `text` and `json`
-- cache and performance modes
+- cache, performance, memory, and watch modes
 - `production` and `strict` scan modes
 - config support
-- ignore and allowlist support
+- ignore, allowlist, catalog, plugin input, and preprocessor support
+- safe auto-fix and package.json formatting
+- JSDoc export ignore tags
 - optional AI summaries in the CLI when a valid token is configured
 
 Planned after MVP:
@@ -131,8 +137,10 @@ npx sadrazam .
 npx sadrazam .
 npx sadrazam . --reporter json
 npx sadrazam . --trace typescript
+npx sadrazam . --trace-export src/lib.ts:usedHelper
 npx sadrazam . --include unused-files,unused-exports
 npx sadrazam . --cache --performance
+npx sadrazam . --fix --format
 AI_PROVIDER=openai AI_TOKEN=your_token npx sadrazam . --ai
 ```
 
@@ -144,6 +152,8 @@ Common scenarios:
 - scan one workspace inside a monorepo
 - export findings as JSON
 - trace why a package is treated as used
+- trace why an export is treated as used
+- apply safe cleanup fixes to `package.json`
 - run in production or strict mode
 - enrich the report with AI summaries
 
@@ -187,6 +197,18 @@ Trace why a package is considered used:
 
 ```bash
 npx sadrazam . --trace typescript
+```
+
+Trace why an export is considered used:
+
+```bash
+npx sadrazam . --trace-export src/lib.ts:usedHelper
+```
+
+Apply safe fixes and normalize modified `package.json` files:
+
+```bash
+npx sadrazam . --fix --format
 ```
 
 Production-only scan:
@@ -241,11 +263,25 @@ Example `sadrazam.json`:
   "production": false,
   "strict": false,
   "exclude": ["missing"],
-  "ignorePackages": ["react"],
+  "ignorePackages": ["$packages:ignored"],
   "allowUnusedDependencies": [],
   "allowUnusedDevDependencies": ["typescript"],
   "allowMissingPackages": [],
   "allowMisplacedDevDependencies": [],
+  "catalog": {
+    "packages": {
+      "ignored": ["react"]
+    },
+    "entryFiles": {
+      "bootstrap": ["scripts/bootstrap.ts"]
+    }
+  },
+  "inputs": {
+    "entryFiles": ["$entryFiles:bootstrap"]
+  },
+  "jsdocTags": {
+    "ignoreExports": ["sadrazam-ignore", "sadrazam-keep"]
+  },
   "workspace": ["packages/web"],
   "ai": {
     "provider": "openai",
@@ -273,6 +309,12 @@ Use these when a finding is intentionally acceptable:
 - `allowUnusedDevDependencies`
 - `allowMissingPackages`
 - `allowMisplacedDevDependencies`
+- `catalog.packages`
+- `catalog.entryFiles`
+- `preprocessors.packagePatterns`
+- `preprocessors.filePatterns`
+- `preprocessors.exportPatterns`
+- `jsdocTags.ignoreExports`
 
 ## AI Mode
 
@@ -350,6 +392,9 @@ This runs repeatable checks for:
 - single-package config-driven repo
 - CommonJS repo
 - monorepo with multiple workspaces
+- compiler-style source files
+- file and export hygiene scenarios
+- config features such as catalog, preprocessors, and JSDoc export tags
 
 ## Known Limitations
 
@@ -357,6 +402,7 @@ This runs repeatable checks for:
 - source mapping uses source maps first and path heuristics second
 - misplaced dependency detection is intentionally conservative
 - dependency analysis is strongest for standard JS/TS project layouts
+- `--fix` is intentionally narrow and currently targets deterministic `package.json` cleanup
 
 ## Product Vision
 

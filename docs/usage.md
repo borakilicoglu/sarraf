@@ -44,6 +44,18 @@ Trace where a package is used:
 sadrazam . --trace commander
 ```
 
+Trace where an export is used:
+
+```bash
+sadrazam . --trace-export src/lib.ts:usedHelper
+```
+
+Apply safe `package.json` cleanup and formatting:
+
+```bash
+sadrazam . --fix --format
+```
+
 ## Scan Modes
 
 Production-only scan:
@@ -70,6 +82,20 @@ Exclude noisy finding types:
 
 ```bash
 sadrazam . --exclude unused-devDependencies
+```
+
+## Auto-fix And Format
+
+Use `--fix` to remove deterministic unused package declarations from `package.json`:
+
+```bash
+sadrazam . --fix
+```
+
+Use `--fix --format` to also normalize the modified `package.json` file:
+
+```bash
+sadrazam . --fix --format
 ```
 
 ## Allowlist Flags

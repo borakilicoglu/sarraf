@@ -13,11 +13,30 @@ Sadrazam loads config from either:
   "production": false,
   "strict": false,
   "exclude": ["missing"],
-  "ignorePackages": ["react"],
+  "ignorePackages": ["$packages:ignored"],
   "allowUnusedDependencies": [],
   "allowUnusedDevDependencies": ["typescript"],
   "allowMissingPackages": [],
   "allowMisplacedDevDependencies": [],
+  "catalog": {
+    "packages": {
+      "ignored": ["react"]
+    },
+    "entryFiles": {
+      "bootstrap": ["scripts/bootstrap.ts"]
+    }
+  },
+  "inputs": {
+    "entryFiles": ["$entryFiles:bootstrap"]
+  },
+  "preprocessors": {
+    "packagePatterns": ["@types/*"],
+    "filePatterns": ["src/generated/*"],
+    "exportPatterns": ["src/lib.ts: ignored*"]
+  },
+  "jsdocTags": {
+    "ignoreExports": ["sadrazam-ignore", "sadrazam-keep"]
+  },
   "workspace": ["packages/web"],
   "ai": {
     "provider": "openai",
@@ -35,3 +54,13 @@ CLI flags override config values.
 - `allowUnusedDevDependencies`
 - `allowMissingPackages`
 - `allowMisplacedDevDependencies`
+- `catalog.packages`
+- `catalog.entryFiles`
+- `inputs.entryFiles`
+- `inputs.packageNames`
+- `preprocessors.packagePatterns`
+- `preprocessors.filePatterns`
+- `preprocessors.exportPatterns`
+- `jsdocTags.ignoreExports`
+
+Catalog references can be used inside rule and input arrays with `$packages:<name>` and `$entryFiles:<name>`.
