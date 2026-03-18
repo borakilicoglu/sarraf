@@ -8,7 +8,7 @@ titleTemplate: Dependency Analysis CLI
 hero:
   name: Sadrazam
   text: Dependency analysis CLI for JavaScript and TypeScript projects
-  tagline: Find unused packages, trace why they are used, and layer optional AI summaries on top of real dependency findings.
+  tagline: Find unused packages, unused files, and unused exports, then layer optional AI summaries on top of real dependency findings.
   image:
     src: /logo.svg
     alt: Sadrazam logo
@@ -24,8 +24,8 @@ hero:
       link: https://github.com/borakilicoglu/sadrazam
 
 features:
-  - title: Real dependency hygiene checks
-    details: Scan source files, scripts, and package manifests to find unused dependencies, missing declarations, and suspicious dependency placement.
+  - title: Real code and dependency hygiene checks
+    details: Scan source files, scripts, and package manifests to find unused dependencies, missing declarations, unused files, unused exports, and suspicious dependency placement.
   - title: Built for real repos
     details: Workspace-aware scanning, CommonJS support, source mapping, strict mode, and script parsing are already built in.
   - title: AI when you want it
@@ -45,9 +45,12 @@ AI_PROVIDER=openai AI_TOKEN=your_token npx sadrazam . --ai
 
 - unused `dependencies` and `devDependencies`
 - missing package declarations
+- unused source files
+- unused reachable exports
 - workspace and monorepo-aware scanning
 - package usage tracing with `--trace`
 - config-based allowlists and ignore rules
+- cache and performance modes
 - production-only and strict scan modes
 - optional AI summaries on top of scan findings
 
@@ -88,5 +91,6 @@ AI_PROVIDER=openai AI_TOKEN=your_token sadrazam . --ai
 - [Getting Started](/getting-started)
 - [CLI Usage](/usage)
 - [Config](/config)
+- [Findings](/findings)
 - [AI Mode](/ai-mode)
 - [CI and Releases](/ci)

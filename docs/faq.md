@@ -19,3 +19,12 @@ Use either `sadrazam.json` or `package.json#sadrazam`.
 ## Can I use it in CI?
 
 Yes. The exit codes are stable and the JSON reporter is intended for automation.
+
+
+## Can it find unused files and exports?
+
+Yes. Sadrazam can report unreachable source files and unused exports in reachable local modules.
+
+## Can I focus only on file-level findings?
+
+Yes. Use `--include unused-files,unused-exports`.

@@ -11,11 +11,15 @@ Sadrazam scans your dependencies like a jeweler inspects gold. It finds unused p
 Current status:
 
 - unused `dependencies` and `devDependencies`
+- missing package declarations
+- unused source file detection
+- unused export detection for reachable local modules
 - script-aware dependency detection
 - workspace and monorepo-aware scanning
 - text and JSON reporters
 - package usage tracing
 - source mapping from build output back to source files
+- cache and performance scan modes
 - production and strict scan modes
 - config file support via `sadrazam.json` or `package.json#sadrazam`
 - ignore and allowlist controls for findings
@@ -41,9 +45,11 @@ Sadrazam analyzes a project by reading its manifest and source files, then compa
 
 Without AI:
 
-- scans the project
-- resolves imported packages
+- scans the project graph
+- resolves imported packages and local source relationships
 - reports unused or suspicious dependencies
+- reports unreachable source files
+- reports unused exports in reachable local modules
 
 With AI token provided:
 
@@ -54,10 +60,11 @@ With AI token provided:
 Current focus:
 
 - read `package.json`
-- scan `js`, `ts`, `jsx`, `tsx`, `mjs`, `cjs`, `mts`, `cts` files
+- scan `js`, `ts`, `jsx`, `tsx`, `mjs`, `cjs`, `mts`, `cts`, `svelte`, `vue`, `mdx`, and `astro` files
 - extract package usage from `import`, `export ... from`, `import = require`, `require`, and `require.resolve`
 - include package usage referenced from `package.json` scripts
-- report unused and suspicious dependency declarations
+- trace local source reachability from package and script entry points
+- report unused dependencies, unused files, unused exports, and suspicious declarations
 
 ## MVP Scope
 
@@ -69,11 +76,15 @@ Included in v1:
 - source scan for dependency usage
 - unused `dependencies` detection
 - unused `devDependencies` detection
+- missing package detection
+- unused file detection
+- unused export detection
 - script parser support
 - workspace-aware scanning
 - trace output for package usage
 - source mapping for build output
 - reporter support for `text` and `json`
+- cache and performance modes
 - `production` and `strict` scan modes
 - config support
 - ignore and allowlist support
@@ -113,6 +124,8 @@ npx sadrazam .
 npx sadrazam .
 npx sadrazam . --reporter json
 npx sadrazam . --trace typescript
+npx sadrazam . --include unused-files,unused-exports
+npx sadrazam . --cache --performance
 AI_PROVIDER=openai AI_TOKEN=your_token npx sadrazam . --ai
 ```
 
@@ -149,6 +162,18 @@ Get JSON output:
 
 ```bash
 npx sadrazam . --reporter json
+```
+
+Focus on code hygiene findings:
+
+```bash
+npx sadrazam . --include unused-files,unused-exports
+```
+
+Measure scan performance with cache enabled:
+
+```bash
+npx sadrazam . --cache --performance
 ```
 
 Trace why a package is considered used:

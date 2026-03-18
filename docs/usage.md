@@ -26,6 +26,18 @@ Emit JSON:
 sadrazam . --reporter json
 ```
 
+Focus on file and export hygiene:
+
+```bash
+sadrazam . --include unused-files,unused-exports
+```
+
+Measure scan performance with cache enabled:
+
+```bash
+sadrazam . --cache --performance
+```
+
 Trace where a package is used:
 
 ```bash
@@ -67,3 +79,16 @@ sadrazam . --ignore-packages react
 sadrazam . --allow-unused-dev-dependencies typescript
 sadrazam . --allow-missing-packages eslint
 ```
+
+## Findings
+
+Sadrazam currently reports these main finding groups:
+
+- `missing`
+- `unused-dependencies`
+- `unused-devDependencies`
+- `misplaced-devDependencies`
+- `unused-files`
+- `unused-exports`
+
+Use `--include` and `--exclude` to focus the output on the findings you care about.
