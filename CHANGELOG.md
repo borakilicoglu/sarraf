@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## v0.1.0-beta.1
+
+### Changed
+- Promoted Sadrazam to the first beta release after real-world validation across TypeScript, monorepo, and CommonJS projects
+- Switched npm publishing to trusted publishing through GitHub Actions
+
+### Fixed
+- Filtered Node built-in modules from dependency findings
+- Improved pnpm workspace discovery and local workspace package resolution
+- Added script binary aliases for common tool commands
+- Reduced false positives for `@types/node` in TypeScript projects that import Node built-ins
+
 ### Added
 - Repository contribution and release rules in `AGENTS.md`
 
