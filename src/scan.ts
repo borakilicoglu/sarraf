@@ -7,7 +7,7 @@ import { readScanCache, writeScanCache } from "./cache.js";
 import { findSourceFiles } from "./fileFinder.js";
 import { parseImports } from "./importParser.js";
 import { readPackageMetadata } from "./packageReader.js";
-import { analyzePlugins } from "./plugins.js";
+import { analyzePluginInputs, analyzePlugins, type PluginInputsConfig } from "./plugins.js";
 import { parseExportedNames, parseLocalReferences, type LocalReference } from "./symbolParser.js";
 import { parsePackageScripts } from "./scriptParser.js";
 import { mapToSourcePath } from "./sourceMapper.js";
@@ -78,6 +78,7 @@ export interface ScanOptions {
   production?: boolean;
   strict?: boolean;
   cache?: boolean;
+  pluginInputs?: PluginInputsConfig;
 }
 
 export async function scanProject(rootDir: string, options: ScanOptions = {}): Promise<ScanResult> {
@@ -92,12 +93,13 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
   const discoverInputsMs = nodePerformance.now() - discoverInputsStart;
 
   const scriptParseStart = nodePerformance.now();
-  const [scriptAnalysis, pluginAnalysis] = await Promise.all([
+  const [scriptAnalysis, pluginAnalysis, inputAnalysis] = await Promise.all([
     parsePackageScripts(packageMetadata.packageDir, packageMetadata.scripts),
     analyzePlugins({ packageDir: packageMetadata.packageDir, scripts: packageMetadata.scripts }),
+    analyzePluginInputs(packageMetadata.packageDir, options.pluginInputs),
   ]);
   const scriptParseMs = nodePerformance.now() - scriptParseStart;
-  const allFiles = mergeFiles(files, scriptAnalysis.fileEntries, pluginAnalysis.fileEntries);
+  const allFiles = mergeFiles(files, scriptAnalysis.fileEntries, pluginAnalysis.fileEntries, inputAnalysis.fileEntries);
 
   const selectedFiles = options.production || options.strict
     ? allFiles.filter((filePath) => isProductionFilePath(absoluteRoot, filePath))
@@ -157,15 +159,23 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
   const readFilesMs = nodePerformance.now() - readFilesStart;
 
   const analysisStart = nodePerformance.now();
-  const commandPackages = mergeStringLists(scriptAnalysis.commandPackages, pluginAnalysis.commandPackages);
-  const commandUsage = mergeCommandUsage(scriptAnalysis.commandUsage, pluginAnalysis.commandUsage);
+  const commandPackages = mergeStringLists(
+    scriptAnalysis.commandPackages,
+    pluginAnalysis.commandPackages,
+    inputAnalysis.commandPackages,
+  );
+  const commandUsage = mergeCommandUsage(
+    scriptAnalysis.commandUsage,
+    pluginAnalysis.commandUsage,
+    inputAnalysis.commandUsage,
+  );
   const externalImports = collectExternalImports(fileResults, commandPackages);
   const packageTraces = collectPackageTraces(fileResults, commandUsage);
   const exportTraces = collectExportTraces(
     absoluteRoot,
     fileResults,
     packageMetadata.entrySpecifiers,
-    scriptAnalysis.fileEntries,
+    mergeFiles(scriptAnalysis.fileEntries, pluginAnalysis.fileEntries, inputAnalysis.fileEntries),
   );
   const missingPackages = externalImports.filter(
     (name) => !packageMetadata.allDependencies.has(name),
@@ -188,19 +198,19 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
     : [];
   const scriptEntryFiles = await mapScriptEntryFiles(
     absoluteRoot,
-    mergeFiles(scriptAnalysis.fileEntries, pluginAnalysis.fileEntries),
+    mergeFiles(scriptAnalysis.fileEntries, pluginAnalysis.fileEntries, inputAnalysis.fileEntries),
   );
   const unusedFiles = getUnusedFiles(
     absoluteRoot,
     fileResults,
     packageMetadata.entrySpecifiers,
-    scriptAnalysis.fileEntries,
+    mergeFiles(scriptAnalysis.fileEntries, pluginAnalysis.fileEntries, inputAnalysis.fileEntries),
   );
   const unusedExports = getUnusedExports(
     absoluteRoot,
     fileResults,
     packageMetadata.entrySpecifiers,
-    scriptAnalysis.fileEntries,
+    mergeFiles(scriptAnalysis.fileEntries, pluginAnalysis.fileEntries, inputAnalysis.fileEntries),
   );
   const analysisMs = nodePerformance.now() - analysisStart;
 
@@ -209,7 +219,7 @@ export async function scanProject(rootDir: string, options: ScanOptions = {}): P
     packagePath: packageMetadata.packagePath,
     files: fileResults,
     externalImports,
-    activePlugins: pluginAnalysis.activePlugins,
+    activePlugins: mergeStringLists(pluginAnalysis.activePlugins, inputAnalysis.activePlugins),
     scriptCommandPackages: commandPackages,
     scriptEntryFiles,
     packageTraces,

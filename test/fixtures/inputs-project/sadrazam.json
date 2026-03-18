@@ -1,0 +1,10 @@
+{
+  "inputs": {
+    "entryFiles": [
+      "./scripts/generate.ts"
+    ],
+    "packageNames": [
+      "vite"
+    ]
+  }
+}

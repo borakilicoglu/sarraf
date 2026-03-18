@@ -129,6 +129,16 @@ describe("CLI", () => {
 
 
 
+
+  it("accepts plugin inputs from config for extra entry files and packages", () => {
+    const report = runJsonReport("inputs-project");
+    const workspace = report.workspaces[0];
+
+    expect(workspace.summary.activePlugins).toEqual(["inputs"]);
+    expect(workspace.findings).toEqual([]);
+    expect(workspace.externalImports).toEqual(["commander", "typescript", "vite"]);
+  });
+
   it("detects built-in plugin package usage from tool-specific CLI arguments", () => {
     const report = runJsonReport("plugin-project");
     const workspace = report.workspaces[0];

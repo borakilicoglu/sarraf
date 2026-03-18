@@ -48,6 +48,17 @@ const scenarios = [
     },
   },
   {
+    name: "inputs-project",
+    cwd: path.join(rootDir, "test", "fixtures", "inputs-project"),
+    args: ["--reporter", "json"],
+    validate(report) {
+      const workspace = report.workspaces[0];
+      assert.equal(workspace.summary.findings, 0);
+      assert.deepEqual(workspace.summary.activePlugins, ["inputs"]);
+      assert.deepEqual(workspace.externalImports, ["commander", "typescript", "vite"]);
+    },
+  },
+  {
     name: "plugin-project",
     cwd: path.join(rootDir, "test", "fixtures", "plugin-project"),
     args: ["--reporter", "json"],

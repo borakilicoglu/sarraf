@@ -22,6 +22,10 @@ export interface SadrazamConfig {
   allowUnusedDevDependencies?: string[];
   allowMissingPackages?: string[];
   allowMisplacedDevDependencies?: string[];
+  inputs?: {
+    entryFiles?: string[];
+    packageNames?: string[];
+  };
   ai?: {
     provider?: string;
     model?: string;

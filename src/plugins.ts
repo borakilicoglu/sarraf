@@ -22,6 +22,11 @@ interface PluginContext {
   scripts: Record<string, string>;
 }
 
+export interface PluginInputsConfig {
+  entryFiles?: string[];
+  packageNames?: string[];
+}
+
 interface ScriptPlugin {
   name: string;
   supports(command: string): boolean;
@@ -218,4 +223,39 @@ function addUsage(usageMap: Map<string, Set<string>>, packageName: string, sourc
   const entries = usageMap.get(packageName) ?? new Set<string>();
   entries.add(source);
   usageMap.set(packageName, entries);
+}
+
+export async function analyzePluginInputs(
+  packageDir: string,
+  inputs: PluginInputsConfig | undefined,
+): Promise<PluginAnalysis> {
+  const entryFiles = new Set<string>();
+  const commandPackages = new Set<string>();
+  const commandUsage = new Map<string, Set<string>>();
+
+  for (const entryFile of inputs?.entryFiles ?? []) {
+    const absolutePath = path.resolve(packageDir, entryFile);
+
+    if (await fileExists(absolutePath)) {
+      entryFiles.add(absolutePath);
+    }
+  }
+
+  for (const packageName of inputs?.packageNames ?? []) {
+    commandPackages.add(packageName);
+    addUsage(commandUsage, packageName, "input:config");
+  }
+
+  const activePlugins = entryFiles.size > 0 || commandPackages.size > 0 ? ["inputs"] : [];
+
+  return {
+    activePlugins,
+    commandPackages: [...commandPackages].sort(),
+    fileEntries: [...entryFiles].sort(),
+    commandUsage: Object.fromEntries(
+      [...commandUsage.entries()]
+        .map(([packageName, sources]) => [packageName, [...sources].sort()] as const)
+        .sort(([left], [right]) => left.localeCompare(right)),
+    ),
+  };
 }

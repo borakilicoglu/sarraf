@@ -144,6 +144,7 @@ async function runScanCommand(
           production: Boolean(mergedOptions.production),
           strict: Boolean(mergedOptions.strict),
           cache: Boolean(mergedOptions.cache || mergedOptions.watch),
+          ...(loadedConfig.config.inputs ? { pluginInputs: loadedConfig.config.inputs } : {}),
         });
         const findings = getActiveFindings(result, rules, Boolean(mergedOptions.production));
 
