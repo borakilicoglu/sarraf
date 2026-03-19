@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/logo.svg" alt="Sadrazam logo" width="200" />
+  <img src="https://raw.githubusercontent.com/borakilicoglu/sadrazam/main/assets/logo.svg?v=2" alt="Sadrazam logo" width="200" />
 </p>
 
 <p align="center">
