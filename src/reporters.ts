@@ -3,7 +3,7 @@ import pc from "picocolors";
 import type { ScanMemory, ScanResult } from "./scan.js";
 import type { WorkspaceTarget } from "./workspaceFinder.js";
 
-export const SUPPORTED_REPORTERS = ["text", "json"] as const;
+export const SUPPORTED_REPORTERS = ["text", "json", "markdown", "sarif"] as const;
 
 export type ReporterType = (typeof SUPPORTED_REPORTERS)[number];
 export type FindingType =
@@ -141,6 +141,14 @@ export function renderReport(input: RenderReportInput): string {
       null,
       2,
     );
+  }
+
+  if (input.reporter === "sarif") {
+    return JSON.stringify(renderSarifReport(input), null, 2);
+  }
+
+  if (input.reporter === "markdown") {
+    return renderMarkdownReport(input);
   }
 
   const lines: string[] = [];
@@ -389,4 +397,108 @@ function formatMs(value: number): string {
 
 function formatMb(value: number): string {
   return `${value.toFixed(1)} MB`;
+}
+
+function renderMarkdownReport(input: RenderReportInput): string {
+  const lines: string[] = [];
+
+  lines.push('# Sadrazam Report');
+  lines.push('');
+  lines.push(`- Target: ${input.targetDir}`);
+  lines.push(`- Workspaces: ${input.workspaces.length}`);
+  lines.push(`- Mode: ${describeMode(input)}`);
+
+  if (input.configurationHints && input.configurationHints.length > 0) {
+    lines.push('');
+    lines.push('## Configuration Hints');
+    lines.push('');
+    for (const hint of input.configurationHints) {
+      lines.push(`- ${hint}`);
+    }
+  }
+
+  for (const { workspace, result, findings } of input.workspaces) {
+    const findingCount = findings.reduce((sum, finding) => sum + finding.items.length, 0);
+
+    lines.push('');
+    lines.push(`## ${workspace.name} (${workspace.relativeDir})`);
+    lines.push('');
+    lines.push(`- Package: ${result.packagePath}`);
+    lines.push(`- Files scanned: ${result.files.length}`);
+    lines.push(`- External packages used: ${result.externalImports.length}`);
+    lines.push(`- Findings: ${findingCount}`);
+    if (input.cache) {
+      lines.push(`- Cache: ${result.cached ? 'hit' : 'miss'}`);
+    }
+    if (result.activePlugins.length > 0) {
+      lines.push(`- Plugins: ${result.activePlugins.join(', ')}`);
+    }
+    if (result.scriptCommandPackages.length > 0) {
+      lines.push(`- Script packages: ${result.scriptCommandPackages.join(', ')}`);
+    }
+
+    if (findingCount === 0) {
+      lines.push('');
+      lines.push('No dependency issues found.');
+      continue;
+    }
+
+    for (const finding of findings) {
+      lines.push('');
+      lines.push(`### ${finding.title}`);
+      lines.push('');
+      for (const item of finding.items) {
+        lines.push(`- ${item}`);
+      }
+    }
+  }
+
+  return lines.join('\n');
+}
+
+function renderSarifReport(input: RenderReportInput) {
+  const rules = [
+    { id: 'missing', name: 'Missing package declarations', shortDescription: { text: 'Package is used but not declared in package.json.' } },
+    { id: 'unused-dependencies', name: 'Unused dependencies', shortDescription: { text: 'A dependency is declared but not used.' } },
+    { id: 'unused-devDependencies', name: 'Unused devDependencies', shortDescription: { text: 'A devDependency is declared but not used.' } },
+    { id: 'misplaced-devDependencies', name: 'Misplaced devDependencies', shortDescription: { text: 'A devDependency is used in production code.' } },
+    { id: 'unused-files', name: 'Unused files', shortDescription: { text: 'A source file is unreachable from known entries.' } },
+    { id: 'unused-exports', name: 'Unused exports', shortDescription: { text: 'An export in a reachable module is not used.' } },
+  ];
+
+  const results = input.workspaces.flatMap(({ workspace, result, findings }) =>
+    findings.flatMap((finding) =>
+      finding.items.map((item) => ({
+        ruleId: finding.type,
+        level: finding.type === 'missing' || finding.type === 'misplaced-devDependencies' ? 'error' : 'warning',
+        message: { text: `${finding.title}: ${item}` },
+        locations: [
+          {
+            physicalLocation: {
+              artifactLocation: {
+                uri: workspace.relativeDir === '.' ? result.packagePath : workspace.relativeDir,
+              },
+            },
+          },
+        ],
+      })),
+    ),
+  );
+
+  return {
+    $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
+    version: '2.1.0',
+    runs: [
+      {
+        tool: {
+          driver: {
+            name: 'Sadrazam',
+            informationUri: 'https://github.com/borakilicoglu/sadrazam',
+            rules,
+          },
+        },
+        results,
+      },
+    ],
+  };
 }

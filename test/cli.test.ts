@@ -29,6 +29,20 @@ function runJsonReportForDir(targetDir: string, extraArgs: string[] = []) {
   return JSON.parse(stdout);
 }
 
+function runReport(fixtureName: string, reporter: string, extraArgs: string[] = []) {
+  const fixtureDir = path.join(rootDir, "test", "fixtures", fixtureName);
+
+  try {
+    return execFileSync("node", [cliPath, fixtureDir, "--reporter", reporter, ...extraArgs], {
+      cwd: rootDir,
+      encoding: "utf8",
+    });
+  } catch (error) {
+    const typedError = error as { stdout: string };
+    return typedError.stdout;
+  }
+}
+
 async function waitForOutput(predicate: () => boolean, timeoutMs = 4000) {
   const start = Date.now();
 
@@ -94,6 +108,28 @@ describe("CLI", () => {
     expect(report.memory.peak.heapUsedMb).toBeGreaterThanOrEqual(0);
     expect(workspace.memory.heapUsedMb).toBeGreaterThanOrEqual(0);
     expect(workspace.memory.rssMb).toBeGreaterThanOrEqual(0);
+  });
+
+  it("renders a markdown report", () => {
+    const report = runReport("config-project", "markdown");
+
+    expect(report).toContain("# Sadrazam Report");
+    expect(report).toContain("## config-project (.)");
+    expect(report).toContain("No dependency issues found.");
+  });
+
+  it("renders a SARIF report", () => {
+    const report = JSON.parse(runReport("unused-files-project", "sarif"));
+
+    expect(report.version).toBe("2.1.0");
+    expect(report.runs[0].tool.driver.name).toBe("Sadrazam");
+    expect(report.runs[0].results).toEqual([
+      expect.objectContaining({
+        ruleId: "unused-files",
+        level: "warning",
+        message: { text: "Unused files: src/unused.ts" },
+      }),
+    ]);
   });
 
   it("reuses cached scan results when inputs are unchanged", () => {
