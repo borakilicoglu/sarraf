@@ -80,18 +80,36 @@ Current focus:
 - trace local source reachability from package and script entry points
 - report unused dependencies, unused files, unused exports, and suspicious declarations
 
-## Capabilities
+## Overview
 
-Sadrazam now covers more than the original MVP surface. Today it includes:
-
-- dependency findings for unused, missing, and suspicious declarations
-- source graph analysis for unused files and unused exports
-- package trace and export trace
-- monorepo, workspace, script parser, and CommonJS support
-- cache, performance, memory, watch, production, and strict modes
-- config rules, catalogs, preprocessors, plugin inputs, and JSDoc ignore tags
-- safe `--fix` and `--fix --format` support for `package.json`
-- optional AI summaries for supported providers
+| Name | Description or example |
+| --- | --- |
+| Auto-fix | Use `--fix` to safely remove deterministic unused package declarations from `package.json`. |
+| Cache | Use `--cache` to speed up consecutive runs when inputs are unchanged. |
+| Catalog | Reuse config entries with `catalog.packages` and `catalog.entryFiles`, and get hints for unused catalog entries. |
+| CommonJS | `require`, `require.resolve`, and hybrid import patterns are supported. |
+| Compilers | Support for `.astro`, `.mdx`, `.svelte`, and `.vue` source scanning. |
+| Configuration hints | Display hints for stale allowlists, ignored entries, and unused catalog references. |
+| Debug | Use `--debug` for troubleshooting resolved config and rule state. |
+| Filters | Use `--include` and `--exclude` to focus on specific finding groups. |
+| Format | Use `--format` with `--fix` to normalize modified `package.json` files. |
+| JSDoc tags | Tag exports with `@sadrazam-ignore` or `@sadrazam-keep` to suppress unused export findings. |
+| Memory usage | Use `--memory` for peak heap and RSS insight. |
+| Monorepos | Workspaces are first-class and can be filtered with `--workspace`. |
+| Performance | Use `--performance` for workspace and total timing insights. |
+| Plugins | Built-in plugin analysis exists for common tools. |
+| Plugins: inputs | Add entry files and package usage through config inputs. |
+| Plugins: CLI arguments | Parse common tool arguments such as `--config`, `--plugin`, and `--parser`. |
+| Preprocessors | Preprocess findings before reporting them through package, file, and export patterns. |
+| Production mode | Use `--production` to lint only production code paths. |
+| Reporters | Use built-in `text` and `json` reporters for human and machine-readable output. |
+| Rules | Exclude or focus on specific issue types with ignore and allowlist rules. |
+| Script parser | `package.json` scripts contribute entry paths and package dependencies. |
+| Source mapping | Map `dist` files back to `src` files through sourcemaps and heuristics. |
+| Strict mode | Use `--strict` to flag production usage of `devDependencies`. |
+| Trace | Trace packages and exports to find where they are used. |
+| Watch mode | Use `--watch` for live updates of unused files, exports, and dependency findings. |
+| Workspace | Use `--workspace` to filter workspaces in a monorepo. |
 
 See the full feature matrix: https://borakilicoglu.github.io/sadrazam/features
 
