@@ -80,39 +80,20 @@ Current focus:
 - trace local source reachability from package and script entry points
 - report unused dependencies, unused files, unused exports, and suspicious declarations
 
-## MVP Scope
+## Capabilities
 
-The first version is intentionally narrow.
+Sadrazam now covers more than the original MVP surface. Today it includes:
 
-Included in v1:
+- dependency findings for unused, missing, and suspicious declarations
+- source graph analysis for unused files and unused exports
+- package trace and export trace
+- monorepo, workspace, script parser, and CommonJS support
+- cache, performance, memory, watch, production, and strict modes
+- config rules, catalogs, preprocessors, plugin inputs, and JSDoc ignore tags
+- safe `--fix` and `--fix --format` support for `package.json`
+- optional AI summaries for supported providers
 
-- package manifest analysis
-- source scan for dependency usage
-- unused `dependencies` detection
-- unused `devDependencies` detection
-- missing package detection
-- unused file detection
-- unused export detection
-- script parser support
-- workspace-aware scanning
-- trace output for package and export usage
-- source mapping for build output
-- reporter support for `text` and `json`
-- cache, performance, memory, and watch modes
-- `production` and `strict` scan modes
-- config support
-- ignore, allowlist, catalog, plugin input, and preprocessor support
-- safe auto-fix and package.json formatting
-- JSDoc export ignore tags
-- optional AI summaries in the CLI when a valid token is configured
-
-Planned after MVP:
-
-- deeper wrong dependency placement detection
-- deprecated package checks
-- basic dependency risk score
-- CI-friendly output and exit codes
-- richer AI remediation suggestions
+See the full feature matrix: https://borakilicoglu.github.io/sadrazam/features
 
 ## Install
 
