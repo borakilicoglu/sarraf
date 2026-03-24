@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## v0.1.7
+
+### Added
+- GitHub Sponsors metadata through `.github/FUNDING.yml`
+- A local `CONTRIBUTING.md` guide linked from the README resources section
+
+### Changed
+- Simplified the README hero and intro copy
+- Reorganized README sections around overview, quick start, AI mode, and resources
+- Polished CLI help text and examples without changing command behavior
+- Reordered badges and added a license badge to the README header
+
 ## v0.1.6
 
 ### Added
