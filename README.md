@@ -403,6 +403,12 @@ This runs repeatable checks for:
 - dependency analysis is strongest for standard JS/TS project layouts
 - `--fix` is intentionally narrow and currently targets deterministic `package.json` cleanup
 
+## Support
+
+If Sadrazam helps you keep dependency hygiene under control, you can support ongoing maintenance through GitHub Sponsors:
+
+- https://github.com/sponsors/borakilicoglu
+
 ## Resources
 
 - Website: https://borakilicoglu.github.io/sadrazam/
