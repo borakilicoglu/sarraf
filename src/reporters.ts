@@ -3,7 +3,7 @@ import pc from "picocolors";
 import type { ScanMemory, ScanResult } from "./scan.js";
 import type { WorkspaceTarget } from "./workspaceFinder.js";
 
-export const SUPPORTED_REPORTERS = ["text", "json", "markdown", "sarif"] as const;
+export const SUPPORTED_REPORTERS = ["text", "json", "toon", "markdown", "sarif"] as const;
 
 export type ReporterType = (typeof SUPPORTED_REPORTERS)[number];
 export type FindingType =
@@ -81,66 +81,14 @@ export interface RenderReportInput {
 }
 
 export function renderReport(input: RenderReportInput): string {
+  const payload = buildStructuredReport(input);
+
   if (input.reporter === "json") {
-    return JSON.stringify(
-      {
-        targetDir: input.targetDir,
-        mode: {
-          debug: input.debug,
-          performance: input.performance,
-          memory: input.memory,
-          watch: input.watch,
-          cache: input.cache,
-          fix: input.fix,
-          format: input.format,
-          production: input.production,
-          strict: input.strict,
-          include: input.include,
-          exclude: input.exclude,
-        },
-        ai: input.ai ?? null,
-        aiSummary: input.aiSummary ?? null,
-        warnings: input.warnings ?? [],
-        appliedFixes: input.appliedFixes ?? [],
-        configurationHints: input.configurationHints ?? [],
-        configSource: input.configSource ?? null,
-        rulesSummary: input.rulesSummary ?? null,
-        performance: input.performance ? input.performanceSummary ?? null : null,
-        memory: input.memory ? input.memorySummary ?? null : null,
-        workspaces: input.workspaces.map(({ workspace, result, findings }) => ({
-          workspace,
-          summary: {
-            filesScanned: result.files.length,
-            externalPackagesUsed: result.externalImports.length,
-            findings: findings.reduce((sum, finding) => sum + finding.items.length, 0),
-            activePlugins: result.activePlugins,
-            scriptCommandPackages: result.scriptCommandPackages,
-            scriptEntryFiles: result.scriptEntryFiles,
-            cached: result.cached,
-          },
-          findings,
-          externalImports: result.externalImports,
-          unusedFiles: result.unusedFiles,
-          unusedExports: result.unusedExports,
-          performance: input.performance ? result.performance : null,
-          memory: input.memory ? result.memory : null,
-          traces: input.trace
-            ? {
-                package: input.trace,
-                sources: result.packageTraces[input.trace] ?? [],
-              }
-            : null,
-          exportTrace: input.traceExport
-            ? {
-                export: input.traceExport,
-                sources: result.exportTraces[input.traceExport] ?? [],
-              }
-            : null,
-        })),
-      },
-      null,
-      2,
-    );
+    return JSON.stringify(payload, null, 2);
+  }
+
+  if (input.reporter === "toon") {
+    return encodeToToon(payload as unknown as ToonValue);
   }
 
   if (input.reporter === "sarif") {
@@ -357,6 +305,203 @@ export function renderReport(input: RenderReportInput): string {
   }
 
   return lines.join("\n");
+}
+
+function buildStructuredReport(input: RenderReportInput) {
+  return {
+    targetDir: input.targetDir,
+    mode: {
+      debug: input.debug,
+      performance: input.performance,
+      memory: input.memory,
+      watch: input.watch,
+      cache: input.cache,
+      fix: input.fix,
+      format: input.format,
+      production: input.production,
+      strict: input.strict,
+      include: input.include,
+      exclude: input.exclude,
+    },
+    ai: input.ai ?? null,
+    aiSummary: input.aiSummary ?? null,
+    warnings: input.warnings ?? [],
+    appliedFixes: input.appliedFixes ?? [],
+    configurationHints: input.configurationHints ?? [],
+    configSource: input.configSource ?? null,
+    rulesSummary: input.rulesSummary ?? null,
+    performance: input.performance ? input.performanceSummary ?? null : null,
+    memory: input.memory ? input.memorySummary ?? null : null,
+    workspaces: input.workspaces.map(({ workspace, result, findings }) => ({
+      workspace,
+      summary: {
+        filesScanned: result.files.length,
+        externalPackagesUsed: result.externalImports.length,
+        findings: findings.reduce((sum, finding) => sum + finding.items.length, 0),
+        activePlugins: result.activePlugins,
+        scriptCommandPackages: result.scriptCommandPackages,
+        scriptEntryFiles: result.scriptEntryFiles,
+        cached: result.cached,
+      },
+      findings,
+      externalImports: result.externalImports,
+      unusedFiles: result.unusedFiles,
+      unusedExports: result.unusedExports,
+      performance: input.performance ? result.performance : null,
+      memory: input.memory ? result.memory : null,
+      traces: input.trace
+        ? {
+            package: input.trace,
+            sources: result.packageTraces[input.trace] ?? [],
+          }
+        : null,
+      exportTrace: input.traceExport
+        ? {
+            export: input.traceExport,
+            sources: result.exportTraces[input.traceExport] ?? [],
+          }
+        : null,
+    })),
+  };
+}
+
+type ToonValue = null | boolean | number | string | ToonValue[] | ToonObject;
+
+interface ToonObject {
+  [key: string]: ToonValue;
+}
+
+function encodeToToon(value: ToonValue): string {
+  return renderToToonDocument(value).join("\n");
+}
+
+function renderToToonDocument(value: ToonValue): string[] {
+  if (Array.isArray(value) || !isPlainObject(value)) {
+    return renderToToonValue(value, 0, "value");
+  }
+
+  const lines: string[] = [];
+
+  for (const [key, child] of Object.entries(value)) {
+    lines.push(...renderToToonValue(child, 0, key));
+  }
+
+  return lines;
+}
+
+function renderToToonValue(value: ToonValue, depth: number, label?: string): string[] {
+  const indent = "  ".repeat(depth);
+  const keyPrefix = label ? `${escapeToonKey(label)}` : "";
+
+  if (value === null) {
+    return [`${indent}${keyPrefix}=null`];
+  }
+
+  if (typeof value === "boolean") {
+    return [`${indent}${keyPrefix}=${value}`];
+  }
+
+  if (typeof value === "number") {
+    return [`${indent}${keyPrefix}=${Number.isFinite(value) ? value : "null"}`];
+  }
+
+  if (typeof value === "string") {
+    return [`${indent}${keyPrefix}=${escapeToonScalar(value)}`];
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return [`${indent}${keyPrefix}[0]:`];
+    }
+
+    if (isUniformObjectArray(value)) {
+      const firstEntry = value[0] as ToonObject;
+      const fields = Object.keys(firstEntry);
+      const rows = value.map((entry) =>
+        fields.map((field) => formatToonInlineScalar(((entry as ToonObject)[field] ?? null) as null | boolean | number | string)).join(","),
+      );
+
+      return [`${indent}${keyPrefix}[${value.length}]{${fields.join(",")}}:`, ...rows.map((row) => `${indent}  ${row}`)];
+    }
+
+    const lines = [`${indent}${keyPrefix}[${value.length}]:`];
+    for (const item of value) {
+      if (isInlineScalar(item)) {
+        lines.push(`${indent}  ${formatToonInlineScalar(item)}`);
+        continue;
+      }
+
+      lines.push(`${indent}  -`);
+      lines.push(...renderToToonNested(item, depth + 2));
+    }
+    return lines;
+  }
+
+  const entries = Object.entries(value);
+  if (entries.length === 0) {
+    return [`${indent}${keyPrefix}:`];
+  }
+
+  const lines = [`${indent}${keyPrefix}:`];
+  for (const [childKey, childValue] of entries) {
+    lines.push(...renderToToonValue(childValue, depth + 1, childKey));
+  }
+  return lines;
+}
+
+function renderToToonNested(value: ToonValue, depth: number): string[] {
+  if (isPlainObject(value)) {
+    const lines: string[] = [];
+    for (const [key, child] of Object.entries(value)) {
+      lines.push(...renderToToonValue(child, depth, key));
+    }
+    return lines;
+  }
+
+  return renderToToonValue(value, depth, "value");
+}
+
+function isUniformObjectArray(value: ToonValue[]): boolean {
+  if (value.length === 0 || !value.every((entry) => isPlainObject(entry))) {
+    return false;
+  }
+
+  const keys = Object.keys(value[0] as ToonObject);
+
+  return value.every((entry) => {
+    const typedEntry = entry as ToonObject;
+    const entryKeys = Object.keys(typedEntry);
+    return entryKeys.length === keys.length
+      && entryKeys.every((key, index) => key === keys[index] && isInlineScalar(typedEntry[key] ?? null));
+  });
+}
+
+function isPlainObject(value: ToonValue): value is ToonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isInlineScalar(value: ToonValue): value is null | boolean | number | string {
+  return value === null || typeof value === "boolean" || typeof value === "number" || typeof value === "string";
+}
+
+function formatToonInlineScalar(value: null | boolean | number | string): string {
+  if (value === null) {
+    return "null";
+  }
+
+  if (typeof value === "string") {
+    return escapeToonScalar(value);
+  }
+
+  return String(value);
+}
+
+function escapeToonKey(value: string): string {
+  return /^[A-Za-z0-9_.\-\/]+$/.test(value) ? value : JSON.stringify(value);
+}
+
+function escapeToonScalar(value: string): string {
+  return value === "" || /[\s,:=\[\]\{\}"\\]/.test(value) ? JSON.stringify(value) : value;
 }
 
 function describeMode(input: RenderReportInput): string {

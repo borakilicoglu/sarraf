@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.1.8
+
+### Added
+- `toon` reporter for agent-friendly structured output
+
+### Changed
+- Updated CLI help, README, and docs examples to include TOON output support
+- Expanded CLI coverage for the new TOON reporter
+
 ## v0.1.7
 
 ### Added

@@ -37,6 +37,7 @@ features:
 ```bash
 npx sadrazam .
 npx sadrazam . --reporter json
+npx sadrazam . --reporter toon
 npx sadrazam . --trace typescript
 AI_PROVIDER=openai AI_TOKEN=your_token npx sadrazam . --ai
 ```
@@ -79,6 +80,7 @@ sadrazam . --workspace packages/web
 
 ```bash
 sadrazam . --reporter json
+sadrazam . --reporter toon
 ```
 
 ### Add AI summaries

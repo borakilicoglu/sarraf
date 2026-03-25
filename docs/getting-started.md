@@ -24,6 +24,7 @@ Useful first commands:
 
 ```bash
 sadrazam . --reporter json
+sadrazam . --reporter toon
 sadrazam . --trace typescript
 sadrazam . --production --strict
 ```

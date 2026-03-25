@@ -18,7 +18,7 @@ Use either `sadrazam.json` or `package.json#sadrazam`.
 
 ## Can I use it in CI?
 
-Yes. The exit codes are stable and the JSON reporter is intended for automation.
+Yes. The exit codes are stable and the JSON and TOON reporters are intended for automation.
 
 ## Can it apply fixes automatically?
 

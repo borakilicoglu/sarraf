@@ -26,6 +26,12 @@ Emit JSON:
 sadrazam . --reporter json
 ```
 
+Emit TOON:
+
+```bash
+sadrazam . --reporter toon
+```
+
 Focus on file and export hygiene:
 
 ```bash

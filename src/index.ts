@@ -86,6 +86,7 @@ program
 Examples:
   sadrazam .
   sadrazam . --reporter json
+  sadrazam . --reporter toon
   sadrazam . --reporter markdown
   sadrazam . --reporter sarif
   sadrazam . --trace typescript

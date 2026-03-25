@@ -22,7 +22,7 @@ Sadrazam covers a broad dependency and code-hygiene surface. This page summarize
 | Plugins: CLI arguments | Parse common tool arguments such as `--config`, `--plugin`, and `--parser` to enrich analysis. |
 | Preprocessors | Preprocess findings before reporting them through package, file, and export patterns. |
 | Production mode | Use `--production` to lint only production code paths. |
-| Reporters | Use built-in `text` and `json` reporters for human and machine-readable output. |
+| Reporters | Use built-in `text`, `json`, `toon`, `markdown`, and `sarif` reporters for human and machine-readable output. |
 | Rules | Exclude or focus on specific issue types with ignore and allowlist rules. |
 | Script parser | Shell scripts and `package.json` scripts contribute entry paths and package dependencies. |
 | Source mapping | Map `dist` files back to `src` files through sourcemaps and heuristics. |

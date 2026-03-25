@@ -12,6 +12,8 @@ Sadrazam uses these exit codes:
 
 ```bash
 sadrazam . --reporter json
+# or
+sadrazam . --reporter toon
 ```
 
 Because findings return `2`, CI can fail fast without custom parsing.

@@ -118,6 +118,16 @@ describe("CLI", () => {
     expect(report).toContain("No dependency issues found.");
   });
 
+  it("renders a TOON report", () => {
+    const report = runReport("config-project", "toon");
+
+    expect(report).toContain("targetDir=");
+    expect(report).toContain("mode:");
+    expect(report).toContain("workspaces[1]:");
+    expect(report).toContain("workspace:");
+    expect(report).toContain("name=config-project");
+  });
+
   it("renders a SARIF report", () => {
     const report = JSON.parse(runReport("unused-files-project", "sarif"));
 
